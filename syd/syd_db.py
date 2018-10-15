@@ -3,6 +3,7 @@
 import dataset
 import json
 import os
+import sys
 import datetime
 
 # -----------------------------------------------------------------------------
@@ -89,4 +90,20 @@ def open_db(filename):
     db = dataset.connect('sqlite:///'+filename)
 
     return db
+
+# -----------------------------------------------------------------------------
+def get_db_filename(filename):
+    '''
+    Check environment variable SYD_DB_FILENAME if filename is void
+    '''
+
+    # check if read filename from environment variable
+    if (filename == ''):
+        try:
+            filename = os.environ['SYD_DB_FILENAME']
+        except:
+            print('Error, filename is empty and environment variable SYD_DB_FILENAME does not exist')
+            exit(0)
+
+    return filename
 
