@@ -19,5 +19,6 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ),
     scripts=[
-        'bin/syd_info']
+        'bin/syd_info',
+        'bin/syd_find']
 )

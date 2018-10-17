@@ -5,6 +5,9 @@ import json
 import os
 import sys
 import datetime
+from .syd_patient import *
+from .syd_injection import *
+from .syd_radionuclide import *
 
 # -----------------------------------------------------------------------------
 def create_db(filename):
@@ -39,34 +42,10 @@ def create_db(filename):
     }
     dbi.insert(info)
 
-    # create default tables
-    q = 'CREATE TABLE Patient (\
-    id INTEGER PRIMARY KEY NOT NULL,\
-    study_id INTEGER NOT NULL UNIQUE,\
-    name TEXT NOT NULL UNIQUE,\
-    dicom_id TEXT UNIQUE,\
-    sex TEXT)'
-    result = db.query(q)
-
-    # alternative # FIXME how to set unique ?
-    '''p = db.create_table('Patient')
-    p.create_column('name', type=db.types.text)
-    p.create_column('study_id', type=db.types.integer)
-    p.create_column('dicom_id', type=db.types.text)
-    p.create_column('sex', type=db.types.text)
-    '''
-
-    # create default tables
-    q = 'CREATE TABLE Injection (\
-    id INTEGER PRIMARY KEY NOT NULL,\
-    patient_id INTEGER NOT NULL,\
-    radionuclide_id INTEGER NOT NULL,\
-    activity_in_MBq REAL NO NULL)'
-    result = db.query(q)
-    injection_table = db['Injection']
-    injection_table.create_column('date', db.types.datetime)
-    injection_table.create_column('calibration_date', db.types.datetime)
-    injection_table.create_column('calibration_activity_in_MBq', db.types.float)
+    # create Patient table
+    create_patient_table(db)
+    create_radionuclide_table(db)
+    create_injection_table(db)
 
     return db
 
@@ -107,3 +86,41 @@ def get_db_filename(filename):
 
     return filename
 
+# -----------------------------------------------------------------------------
+def insert(table, elements):
+    '''
+    Bulk insert all elements in the table.
+    Elements are given as vector of dictionary
+    '''
+    with table.db as tx:
+        for p in elements:
+            tx[table.name].insert(p)
+
+
+
+# -----------------------------------------------------------------------------
+def replace_key_with_id(element, key_name, table, table_key_name):
+    '''
+    Replace the key 'key_name' in the element (dict) with the id of the
+    element find in the table
+    '''
+    #p = table.find_one(table_key_name=element[key_name])
+    statement = 'SELECT id FROM '+table.name+' WHERE '+table_key_name+' = "'+element[key_name]+'"'
+    i = 0
+    s = element[key_name]
+    res = table.db.query(statement)
+    for row in res:
+        if (i != 0):
+            print('Error, table {} has several elements with {}={}'
+                  .format(table.name, table_key_name, s))
+            exit(0)
+        element.pop(key_name)
+        k = table.name.lower()+'_id'
+        element[k] = row['id']
+        i = i +1
+    if (i ==0):
+        print('Error, table {} does not contain element with {}={}'
+              .format(table.name, table_key_name, s))
+        exit(0)
+
+    return element
