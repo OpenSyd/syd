@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import syd
+import click
+import pydicom
+import os
+
+# -----------------------------------------------------------------------------
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument('filename')
+def syd_dicom_info(filename):
+    '''
+    Print dicom tags/value of the given filename
+    '''
+
+    # check if already exist
+    if (os.path.isdir(filename)):
+        print('Error {} is a directory, not a file.'.format(filename))
+        exit(0)
+    if (not os.path.isfile(filename)):
+        print('Error {} does not exist.'.format(filename))
+        exit(0)
+
+    # open the dicom
+    try:
+        ds = pydicom.read_file(filename)
+    except:
+        print('Error {} is not a dicom file.'.format(filename))
+        exit(0)
+
+    # print
+    print(ds)
+
+
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    syd_dicom_info()

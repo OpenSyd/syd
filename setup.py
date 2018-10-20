@@ -20,5 +20,7 @@ setuptools.setup(
     ),
     scripts=[
         'bin/syd_info',
-        'bin/syd_find']
+        'bin/syd_find',
+        'bin/syd_dicom_info',
+        'bin/syd_insert_dicom',]
 )

@@ -46,6 +46,7 @@ def create_db(filename):
     create_patient_table(db)
     create_radionuclide_table(db)
     create_injection_table(db)
+    create_dicomserie_table(db)
 
     return db
 
