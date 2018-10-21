@@ -10,7 +10,9 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.argument('folder')
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
-def syd_insert_dicom(folder, db):
+@click.option('--patient/-p', default='0',
+              help='associate *all* found dicom with this patient id')
+def syd_insert_dicom(folder, db, patient):
     '''
     FIXME
     '''
@@ -20,7 +22,7 @@ def syd_insert_dicom(folder, db):
     db = syd.open_db(db_filename)
 
     # look and insert dicom
-    syd.insert_dicom(db, folder)
+    syd.insert_dicom(db, folder, patient)
 
 
 # -----------------------------------------------------------------------------

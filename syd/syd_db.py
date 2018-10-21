@@ -8,6 +8,7 @@ import datetime
 from .syd_patient import *
 from .syd_injection import *
 from .syd_radionuclide import *
+from .syd_dicom import *
 
 # -----------------------------------------------------------------------------
 def create_db(filename):
@@ -96,7 +97,6 @@ def insert(table, elements):
     with table.db as tx:
         for p in elements:
             tx[table.name].insert(p)
-
 
 
 # -----------------------------------------------------------------------------
