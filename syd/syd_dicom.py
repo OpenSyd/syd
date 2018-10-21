@@ -43,6 +43,22 @@ def create_dicomserie_table(db):
 
 
 # -----------------------------------------------------------------------------
+def create_dicomfile_table(db):
+    '''
+    Create the DicomFile table
+    '''
+
+    # create DicomFile table
+    q = 'CREATE TABLE DicomFile (\
+    id INTEGER PRIMARY KEY NOT NULL,\
+    dicomserie_id INTEGER NOT NULL,\
+    file_id INTEGER NOT NULL UNIQUE,\
+    sop_uid INTEGER NOT NULL UNIQUE,\
+    instance_number INTEGER NOT NULL)'
+    result = db.query(q)
+
+
+# -----------------------------------------------------------------------------
 def insert_dicom(db, folder, patient_id=0):
     '''
     Search for Dicom Series in the folder and insert in the database.
@@ -85,7 +101,7 @@ def insert_dicom(db, folder, patient_id=0):
             tqdm.write('Ignoring {}: (not a dicom)'.format(f))
         # update progress bar
         pbar.update(1)
-
+    pbar.close()
 
     # find all series, group corresponding files and dataset
     series = defaultdict(list)
@@ -128,11 +144,12 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
     # guess fail ?
     if (patient_id == 0):
         print('The dicom serie {} is ignored'.format(sid))
+        print('In file: {}'.format(files[0]))
         return
 
     # check if patient exist
-    p = db['Patient'].find_one(id=patient_id)
-    if p is None:
+    patient = db['Patient'].find_one(id=patient_id)
+    if patient is None:
         print('Error, cannor find the patient with id {}'.format(patient_id))
         print('The dicom serie {} is ignored'.format(sid))
         return
@@ -181,9 +198,42 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
     }
 
     # insert the dicom serie
-    db['DicomSerie'].insert(info)
+    i = db['DicomSerie'].insert(info)
+    dicom_serie = db['DicomSerie'].find_one(id=i)
 
-    # FIXME create elements DicomFile or File ?
+    # create DicomFile and File
+    dicom_file_info = []
+    file_info = []
+    i=0
+    for f in files:
+        ds = dicom_datasets[i]
+        sop_uid = ds[0x0008, 0x0018].value # SOPInstanceUID
+        df = db['DicomFile'].find_one(sop_uid=sop_uid)
+        if df is not None:
+            print('Warning, a file with same sop_uid already exist, ignoring {}'.format(f))
+            continue
+        df, fi = create_dicom_file_info(db, sid, f, ds)
+        if df is not None:
+            dicom_file_info.append(df)
+            file_info.append(fi)
+        i = i+1
+
+    # insert file
+    ids = syd.insert(db['File'], file_info)
+
+    # change file_id in dicomfile
+    i=0
+    for d,i in zip(dicom_file_info, ids):
+        d['file_id'] = i
+
+    syd.insert(db['DicomFile'], dicom_file_info)
+
+    # final verbose
+    print('A new DicomSerie have been inserted ({} {} {}), with {} files'.
+          format(patient['name'],
+                 dicom_serie['modality'],
+                 dicom_serie['acquisition_date'],
+                 len(dicom_file_info)))
 
 # -----------------------------------------------------------------------------
 def guess_patient_from_dicom(db, ds):
@@ -211,4 +261,38 @@ def guess_patient_from_dicom(db, ds):
         return 0
 
     return found[0]['id']
+
+
+# -----------------------------------------------------------------------------
+def create_dicom_file_info(db, sid, f, ds):
+    '''
+    Create dico with DicomFile and File information to be inserted
+    '''
+
+    dicom_serie = db['DicomSerie'].find_one(series_uid=sid)
+    dicom_file_info = {
+        'dicomserie_id': dicom_serie['id'],
+        'sop_uid': ds[0x0008, 0x0018].value, # SOPInstanceUID
+        'instance_number': ds.InstanceNumber
+    }
+
+    # folder : patient_name/date/modality
+    pname = db['Patient'].find_one(id=dicom_serie['patient_id'])['name']
+    date = dicom_serie['acquisition_date'].strftime('%Y-%m-%d')
+    modality = dicom_serie['modality']
+    info = db['Info'].find_one(id=1)
+    path = os.path.join(info['image_folder'],pname)
+    path = os.path.join(path,date)
+    path = os.path.join(path,modality)
+
+    # filename = basename
+    filename = os.path.basename(f)
+
+    file_info = {
+        'filename': filename,
+        'path': path,
+        #'md5': md5 # later
+    }
+
+    return dicom_file_info, file_info
 

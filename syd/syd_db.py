@@ -9,6 +9,7 @@ from .syd_patient import *
 from .syd_injection import *
 from .syd_radionuclide import *
 from .syd_dicom import *
+from .syd_file import *
 
 # -----------------------------------------------------------------------------
 def create_db(filename):
@@ -48,6 +49,8 @@ def create_db(filename):
     create_radionuclide_table(db)
     create_injection_table(db)
     create_dicomserie_table(db)
+    create_dicomfile_table(db)
+    create_file_table(db)
 
     return db
 
@@ -94,10 +97,12 @@ def insert(table, elements):
     Bulk insert all elements in the table.
     Elements are given as vector of dictionary
     '''
+    ids = []
     with table.db as tx:
         for p in elements:
-            tx[table.name].insert(p)
-
+            i = tx[table.name].insert(p)
+            ids.append(i)
+    return ids
 
 # -----------------------------------------------------------------------------
 def replace_key_with_id(element, key_name, table, table_key_name):
