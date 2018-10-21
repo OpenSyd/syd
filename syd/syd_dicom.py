@@ -5,6 +5,7 @@ import pydicom
 import os
 import pathlib
 from collections import defaultdict
+from tqdm import tqdm
 from .syd_helpers import *
 from .syd_db import *
 
@@ -61,6 +62,7 @@ def insert_dicom(db, folder, patient_id=0):
     # read all dicom dataset to get the SeriesInstanceUID
     # store the sid, the filename and the dicom dataset
     dicoms = []
+    pbar = tqdm(total=len(files), leave=False)
     for f in files:
         f = str(f)
         # ignore if this is a folder
@@ -71,16 +73,19 @@ def insert_dicom(db, folder, patient_id=0):
             try:
                 sid = ds.data_element("SeriesInstanceUID").value
             except:
-                print('Ignoring {}: cannot find SeriesInstanceUID'.format(f))
+                tqdm.write('Ignoring {}: cannot find SeriesInstanceUID'.format(f))
             # ignore unmanaged modality
             modality = ds.Modality
             if (modality == 'CT' or modality == 'PT' or modality == 'NM'):
                 s = {'sid':sid, 'f':f, 'ds': ds}
                 dicoms.append(s)
             else:
-                print('Ignoring {}: modality is {}'.format(f,modality))
+                tqdm.write('Ignoring {}: modality is {}'.format(f,modality))
         except:
-            print('Ignoring {}: (not a dicom)'.format(f))
+            tqdm.write('Ignoring {}: (not a dicom)'.format(f))
+        # update progress bar
+        pbar.update(1)
+
 
     # find all series, group corresponding files and dataset
     series = defaultdict(list)
@@ -94,10 +99,9 @@ def insert_dicom(db, folder, patient_id=0):
             series[sid] = { 'f':[d['f']], 'ds':[d['ds']]}
 
     # create series
-    print('Found {} Dicom series.'.format(len(series)))
+    print('Found {} Dicom Series'.format(len(series)))
     for k,v in series.items():
         insert_dicom_serie(db, v['f'], v['ds'], patient_id)
-
 
 # -----------------------------------------------------------------------------
 def insert_dicom_serie(db, files, dicom_datasets, patient_id):
@@ -110,7 +114,7 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
     ds = dicom_datasets[0]
     sid = ds.data_element('SeriesInstanceUID').value
 
-    # check if this series already exist FIXME
+    # check if this series already exist
     dicom_serie = db['DicomSerie'].find_one(series_uid=sid)
     if dicom_serie is not None:
         print('The Dicom Serie already exists in the db, ignoring {} ({} files)'
@@ -121,12 +125,16 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
     if (patient_id == 0):
         patient_id = guess_patient_from_dicom(db, ds)
 
+    # guess fail ?
+    if (patient_id == 0):
+        print('The dicom serie {} is ignored'.format(sid))
+        return
+
     # check if patient exist
-    try:
-        p = db['Patient'].find_one(id=patient_id)
-    except:
+    p = db['Patient'].find_one(id=patient_id)
+    if p is None:
         print('Error, cannor find the patient with id {}'.format(patient_id))
-        print('The dicom serie {} is ignored.'.format(sid))
+        print('The dicom serie {} is ignored'.format(sid))
         return
 
     # get date
@@ -196,7 +204,7 @@ def guess_patient_from_dicom(db, ds):
                 found.append(p)
 
     if (len(found) == 0):
-        print('Cannot guess patient from dicom.')
+        print('Cannot guess patient with PatientID {}'.format(pid))
         return 0
     if (len(found) > 1):
         print('Several patients found with dicomID = {}, bug !?'.format(pid))
