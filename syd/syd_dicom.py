@@ -109,9 +109,13 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
     # consider only the first dataset
     ds = dicom_datasets[0]
     sid = ds.data_element('SeriesInstanceUID').value
-    print(sid)
 
     # check if this series already exist FIXME
+    dicom_serie = db['DicomSerie'].find_one(series_uid=sid)
+    if dicom_serie is not None:
+        print('The Dicom Serie already exists in the db, ignoring {} ({} files)'
+              .format(files[0], len(files)))
+        return
 
     # get patient_id
     if (patient_id == 0):
@@ -141,7 +145,6 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
         reconstruction_date = ds.InstanceCreationDate
         reconstruction_time = ds.InstanceCreationTime
     reconstruction_date = dcm_str_to_date(reconstruction_date+' '+reconstruction_time)
-    print(acquisition_date, reconstruction_date)
 
     # get tag values that are bytes, not string
     try:
