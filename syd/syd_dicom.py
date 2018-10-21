@@ -8,6 +8,7 @@ from collections import defaultdict
 from tqdm import tqdm
 from .syd_helpers import *
 from .syd_db import *
+from shutil import copyfile
 
 # -----------------------------------------------------------------------------
 def create_dicomserie_table(db):
@@ -183,7 +184,7 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
 
     # build info
     info = {
-        'patient_id': 1,
+        'patient_id': patient_id,
         #'injection_id': 1,
         'series_uid': ds.SeriesInstanceUID,
         'study_uid':  ds.StudyInstanceUID,
@@ -225,8 +226,16 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
     i=0
     for d,i in zip(dicom_file_info, ids):
         d['file_id'] = i
-
     syd.insert(db['DicomFile'], dicom_file_info)
+
+    # copy file
+    for df, f in zip(file_info, files):
+        src = f
+        dst = os.path.join(df['path'], df['filename'])
+        if not os.path.exists(df['path']):
+            os.makedirs(df['path'])
+        #if os.path.exists(dst): FIXME overwrite ?
+        copyfile(src, dst)
 
     # final verbose
     print('A new DicomSerie have been inserted ({} {} {}), with {} files'.
