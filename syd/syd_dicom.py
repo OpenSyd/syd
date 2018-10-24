@@ -37,7 +37,8 @@ def create_dicomserie_table(db):
     study_description TEXT,\
     study_name TEXT,\
     dataset_name TEXT,\
-    FOREIGN KEY(patient_id) REFERENCES Patient(id) DEFERRABLE INITIALLY DEFERRED\
+    FOREIGN KEY(patient_id) REFERENCES Patient(id),\
+    FOREIGN KEY(injection_id) REFERENCES Injection(id)\
     )'
     result = db.query(q)
     dicomserie_table = db['DicomSerie']
@@ -57,7 +58,10 @@ def create_dicomfile_table(db):
     dicomserie_id INTEGER NOT NULL,\
     file_id INTEGER NOT NULL UNIQUE,\
     sop_uid INTEGER NOT NULL UNIQUE,\
-    instance_number INTEGER NOT NULL)'
+    instance_number INTEGER NOT NULL,\
+    FOREIGN KEY(dicomserie_id) REFERENCES DicomSerie(id),\
+    FOREIGN KEY(file_id) REFERENCES File(id)\
+    )'
     result = db.query(q)
 
 

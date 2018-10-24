@@ -14,12 +14,11 @@ def create_injection_table(db):
     patient_id INTEGER NOT NULL,\
     radionuclide_id INTEGER NOT NULL,\
     activity_in_MBq REAL,\
-    FOREIGN KEY(patient_id) REFERENCES Patient(id)\
+    FOREIGN KEY(patient_id) REFERENCES Patient(id),\
+    FOREIGN KEY(radionuclide_id) REFERENCES Radionuclide(id)\
     )'
-    # FOREIGN KEY(patient_id) REFERENCES Patient(id) DEFERRABLE INITIALLY DEFERRED,\
-    # FOREIGN KEY(radionuclide_id) REFERENCES Radionuclide(id) DEFERRABLE INITIALLY DEFERRED\
     result = db.query(q)
-    #injection_table = db['Injection']
-    #injection_table.create_column('date', db.types.datetime)
-    #injection_table.create_column('calibration_date', db.types.datetime)
-    #injection_table.create_column('calibration_activity_in_MBq', db.types.float)
+    injection_table = db['Injection']
+    injection_table.create_column('date', db.types.datetime)
+    injection_table.create_column('calibration_date', db.types.datetime)
+    injection_table.create_column('calibration_activity_in_MBq', db.types.float)
