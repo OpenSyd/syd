@@ -2,6 +2,7 @@
 
 import dataset
 
+
 # -----------------------------------------------------------------------------
 def create_patient_table(db):
     '''
@@ -23,4 +24,17 @@ def create_patient_table(db):
     # p.create_column('study_id', type=db.types.integer)
     # p.create_column('dicom_id', type=db.types.text)
     # p.create_column('sex', type=db.types.text)
+
+# -----------------------------------------------------------------------------
+def print_patient(print_format, elements):
+    print(print_format, elements)
+
+    # trial (work in progress)
+    s = ''
+    for e in elements:
+        s = s + '{id:>3} {study_id:>3} {name:>15} {dicom_id}\n'.format(id=e['id'],
+                                                                       study_id=e['study_id'],
+                                                                       dicom_id=e['dicom_id'],
+                                                                       name=e['name'])
+    print(s)
 

@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import syd
+import click
+import re
+
+# -----------------------------------------------------------------------------
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument('table_name')
+@click.argument('id') # FIXME -> allow several ids
+@click.option('--db', default='',
+              help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
+@click.option('--silent/-s', default=False,
+              help='Remove verbose')
+def syd_delete(table_name, id, db, silent):
+    '''
+    Delete a row element from its id
+    '''
+
+    # open the db
+    db_filename = syd.get_db_filename(db)
+    db = syd.open_db(db_filename)
+
+    # check table exist
+    if not table_name in db:
+        print('Error, table {} does not exist. Tables: {}'.format(table_name, db.tables))
+        exit(0)
+
+    # Search for element
+    e = db[table_name].find_one(id=id)
+    if e == None:
+        print('Error, the element with id={} does not exist in table {}'
+              .format(id, table_name))
+        exit(0)
+
+    # delete
+    try:
+        db[table_name].delete(id=id)
+    except Exception as e:
+        print('Error, cannot delete element (this element is used in another table ?)')
+        print(e)
+        exit(0)
+
+    # verbose
+    if not silent:
+        print('Remove {} with id = {}.'.format(table_name, id))
+
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    syd_delete()
+

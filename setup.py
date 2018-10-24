@@ -18,9 +18,15 @@ setuptools.setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ),
+    install_requires=[
+          'dataset',
+          'pydicom',
+          'tqdm'
+      ],
     scripts=[
         'bin/syd_info',
         'bin/syd_find',
+        'bin/syd_delete',
         'bin/syd_dicom_info',
         'bin/syd_insert_dicom',]
 )

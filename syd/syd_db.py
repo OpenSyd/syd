@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import dataset
+import sqlite3
 import json
 import os
 import sys
@@ -10,6 +11,7 @@ from .syd_injection import *
 from .syd_radionuclide import *
 from .syd_dicom import *
 from .syd_file import *
+import pprint
 
 # -----------------------------------------------------------------------------
 def create_db(filename):
@@ -32,6 +34,11 @@ def create_db(filename):
 
     # create empty db
     db = dataset.connect('sqlite:///'+filename)
+    q = 'PRAGMA foreign_keys = ON;'
+    db.query(q)
+    # conn = sqlite3.connect(filename)
+    # c = conn.cursor()
+    # c.execute('PRAGMA foreign_keys = ON')
 
     # DB meta info: creation date, filename, image folder
     db.create_table('Info')
@@ -70,8 +77,12 @@ def open_db(filename):
 
     # FIXME -> check data folder exist
 
-    # connect to the empty db
+    # connect to the db
     db = dataset.connect('sqlite:///'+filename)
+
+    # *NEEDED* to allow foreign keys
+    q = 'PRAGMA foreign_keys = ON;'
+    db.query(q)
 
     return db
 
@@ -98,11 +109,26 @@ def insert(table, elements):
     Elements are given as vector of dictionary
     '''
     ids = []
-    with table.db as tx:
-        for p in elements:
-            i = tx[table.name].insert(p)
-            ids.append(i)
+    try:
+        with table.db as tx:
+            for p in elements:
+                i = tx[table.name].insert(p)
+                ids.append(i)
+    except Exception as e:
+        print('Error, cannot insert element: {}'.format(p))
+        print('Maybe this element is used in another table ?')
+        print(e)
+        exit(0)
     return ids
+
+# -----------------------------------------------------------------------------
+def insert_one(table, element):
+    '''
+    Bulk insert one element in the table.
+    '''
+    elements = [element]
+    ids = insert(table, elements)
+    return ids[0]
 
 # -----------------------------------------------------------------------------
 def replace_key_with_id(element, key_name, table, table_key_name):
@@ -130,3 +156,15 @@ def replace_key_with_id(element, key_name, table, table_key_name):
         exit(0)
 
     return element
+
+
+# -----------------------------------------------------------------------------
+def print_elements(table_name, print_format, elements):
+    '''
+    Pretty print some elements
+    '''
+
+    for e in elements:
+        s = ' '.join(str(x) for x in e.values())
+        print(s)
+

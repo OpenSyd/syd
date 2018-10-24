@@ -12,7 +12,9 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.argument('grep', default='')
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
-def syd_find(table_name, grep, db):
+@click.option('--print_format', '-f', default='default',
+              help='Print format')
+def syd_find(table_name, grep, db, print_format):
     '''
     FIXME
     '''
@@ -22,6 +24,9 @@ def syd_find(table_name, grep, db):
     db = syd.open_db(db_filename)
 
     # FIXME check table exist
+    if not table_name in db:
+        print('Table {} does not exist. Tables: {}'.format(table_name, db.tables))
+        exit(0)
 
     # print tables and columns
     table = db[table_name]
@@ -42,9 +47,7 @@ def syd_find(table_name, grep, db):
             if re.search(grep, s):
                 res.append(e)
 
-    for r in res:
-        s = ' '.join(str(x) for x in r.values())
-        print(s)
+    syd.print_elements(table_name, print_format, res)
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':

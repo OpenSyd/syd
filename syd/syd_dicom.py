@@ -36,7 +36,9 @@ def create_dicomserie_table(db):
     series_description TEXT,\
     study_description TEXT,\
     study_name TEXT,\
-    dataset_name TEXT)'
+    dataset_name TEXT,\
+    FOREIGN KEY(patient_id) REFERENCES Patient(id) DEFERRABLE INITIALLY DEFERRED\
+    )'
     result = db.query(q)
     dicomserie_table = db['DicomSerie']
     dicomserie_table.create_column('acquisition_date', db.types.datetime)
@@ -125,6 +127,7 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
     '''
     Insert one dicom serie, with all associated files
     If patient_id is 0, try to guess
+    Try to associate one injection, only if only one exist for this patient.
     '''
 
     # consider only the first dataset
@@ -139,8 +142,11 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
         return
 
     # get patient_id
+    patient = None
     if (patient_id == 0):
-        patient_id = guess_patient_from_dicom(db, ds)
+        patient = guess_patient_from_dicom(db, ds)
+        if (patient != None):
+            patient_id = patient['id']
 
     # guess fail ?
     if (patient_id == 0):
@@ -149,7 +155,6 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
         return
 
     # check if patient exist
-    patient = db['Patient'].find_one(id=patient_id)
     if patient is None:
         print('Error, cannor find the patient with id {}'.format(patient_id))
         print('The dicom serie {} is ignored'.format(sid))
@@ -182,10 +187,21 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
     except:
         dataset_name = ''
 
+    # guess injection if NM
+    injection_id = None
+    injection = None
+    inj_txt = ''
+    if ds.Modality == 'PT' or ds.Modality == 'NM':
+        inj_txt = ' (no injection found)'
+        injection = guess_injection_from_dicom(db, ds, patient)
+        if injection != None:
+            injection_id = injection['id']
+            inj_txt = '(injection {})'.format(injection['id'])
+
     # build info
     info = {
         'patient_id': patient_id,
-        #'injection_id': 1,
+        'injection_id': injection_id,
         'series_uid': ds.SeriesInstanceUID,
         'study_uid':  ds.StudyInstanceUID,
         'frame_of_reference_uid':  ds.FrameOfReferenceUID,
@@ -238,11 +254,11 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
         copyfile(src, dst)
 
     # final verbose
-    print('A new DicomSerie have been inserted ({} {} {}), with {} files'.
+    print('A new DicomSerie have been inserted ({} {} {}), with {} files {}'.
           format(patient['name'],
                  dicom_serie['modality'],
                  dicom_serie['acquisition_date'],
-                 len(dicom_file_info)))
+                 len(dicom_file_info), inj_txt))
 
 # -----------------------------------------------------------------------------
 def guess_patient_from_dicom(db, ds):
@@ -262,14 +278,35 @@ def guess_patient_from_dicom(db, ds):
             if (tid == pid):
                 found.append(p)
 
+    # ----> FIXME to change with something like ?
+    # table.find(db['Patient'].table.columns.dicom_id like tid)
+
     if (len(found) == 0):
         print('Cannot guess patient with PatientID {}'.format(pid))
-        return 0
+        return None
     if (len(found) > 1):
         print('Several patients found with dicomID = {}, bug !?'.format(pid))
-        return 0
+        return None
 
-    return found[0]['id']
+    return found[0]
+
+
+# -----------------------------------------------------------------------------
+def guess_injection_from_dicom(db, ds, patient):
+    '''
+    Try to guess the injection
+    '''
+
+    injections = db['Injection'].find(patient_id=patient['id'])
+    i = 0
+    injection = None
+    for inj in injections:
+        if (i == 0):
+            injection = inj
+        else:
+            injection = None
+        i = i+1
+    return injection
 
 
 # -----------------------------------------------------------------------------
