@@ -28,24 +28,13 @@ def syd_delete(table_name, id, db, silent):
         print('Error, table {} does not exist. Tables: {}'.format(table_name, db.tables))
         exit(0)
 
-    # Search for element
-    e = db[table_name].find_one(id=id)
-    if e == None:
-        print('Error, the element with id={} does not exist in table {}'
-              .format(id, table_name))
-        exit(0)
-
     # delete
-    try:
-        db[table_name].delete(id=id)
-    except Exception as e:
-        print('Error, cannot delete element (this element is used in another table ?)')
-        print(e)
-        exit(0)
+    syd.delete(db[table_name], id)
 
     # verbose
     if not silent:
         print('Remove {} with id = {}.'.format(table_name, id))
+
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':

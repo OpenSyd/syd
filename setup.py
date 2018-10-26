@@ -19,9 +19,10 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ),
     install_requires=[
-          'dataset',
-          'pydicom',
-          'tqdm'
+        'dataset',
+        'pydicom',
+        'tqdm',
+        'colored'
       ],
     scripts=[
         'bin/syd_info',

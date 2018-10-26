@@ -6,12 +6,13 @@ import json
 import os
 import sys
 import datetime
+
 from .syd_patient import *
 from .syd_injection import *
 from .syd_radionuclide import *
 from .syd_dicom import *
 from .syd_file import *
-import pprint
+from .syd_helpers import *
 
 # -----------------------------------------------------------------------------
 def create_db(filename):
@@ -97,10 +98,11 @@ def get_db_filename(filename):
         try:
             filename = os.environ['SYD_DB_FILENAME']
         except:
-            print('Error, filename is empty and environment variable SYD_DB_FILENAME does not exist')
-            exit(0)
+            s = 'Error, filename is empty and environment variable SYD_DB_FILENAME does not exist'
+            raise_except(s)
 
     return filename
+
 
 # -----------------------------------------------------------------------------
 def insert(table, elements):
@@ -115,10 +117,8 @@ def insert(table, elements):
                 i = tx[table.name].insert(p)
                 ids.append(i)
     except Exception as e:
-        print('Error, cannot insert element: {}'.format(p))
-        print('Maybe this element is used in another table ?')
-        print(e)
-        exit(0)
+        s = 'cannot insert element: {}\n'.format(p)
+        raise_except(s)
     return ids
 
 # -----------------------------------------------------------------------------
@@ -129,6 +129,27 @@ def insert_one(table, element):
     elements = [element]
     ids = insert(table, elements)
     return ids[0]
+
+
+# -----------------------------------------------------------------------------
+def delete(table, id):
+    '''
+    Delete one element from the given table
+    '''
+
+    # Search for element
+    e = table.find_one(id=id)
+    if e == None:
+        s = 'Error, the element with id={} does not exist in table {}'.format(id, table.name)
+        raise_except(s)
+
+    # delete
+    try:
+        table.delete(id=id)
+    except Exception as e:
+        s = 'Error, cannot delete element {} in table {} (maybe it is used in another table ?)'.format(id, table.name)
+        raise_except(s)
+
 
 # -----------------------------------------------------------------------------
 def replace_key_with_id(element, key_name, table, table_key_name):
@@ -143,17 +164,15 @@ def replace_key_with_id(element, key_name, table, table_key_name):
     res = table.db.query(statement)
     for row in res:
         if (i != 0):
-            print('Error, table {} has several elements with {}={}'
-                  .format(table.name, table_key_name, s))
-            exit(0)
+            s = 'Error, table {} has several elements with {}={}'.format(table.name, table_key_name, s)
+            raise_except(s)
         element.pop(key_name)
         k = table.name.lower()+'_id'
         element[k] = row['id']
         i = i +1
     if (i ==0):
-        print('Error, table {} does not contain element with {}={}'
-              .format(table.name, table_key_name, s))
-        exit(0)
+        s = 'Error, table {} does not contain element with {}={}'.format(table.name, table_key_name, s)
+        raise_except(s)
 
     return element
 

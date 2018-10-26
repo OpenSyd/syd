@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from datetime import datetime
+import colored
 
 # -----------------------------------------------------------------------------
 def str_to_date(str):
@@ -25,3 +26,22 @@ def dcm_str_to_date(str):
     # FIXME -> deal with error
     date = datetime.strptime(str, '%Y%m%d %H%M%S')
     return date
+
+
+# -----------------------------------------------------------------------------
+# color constant
+color_error = colored.fg("red") + colored.attr("bold")
+
+# -----------------------------------------------------------------------------
+# color constant
+def fatal(s):
+    s = colored.stylize(s, color_error)
+    print(s)
+    exit(0)
+
+# -----------------------------------------------------------------------------
+# color constant
+def raise_except(s):
+    s = colored.stylize(s, color_error)
+    raise Exception(s)
+
