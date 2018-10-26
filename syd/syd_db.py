@@ -132,22 +132,34 @@ def insert_one(table, element):
 
 
 # -----------------------------------------------------------------------------
-def delete(table, id):
+def delete_one(table, id):
     '''
     Delete one element from the given table
     '''
 
+    delete(table, [id])
+
+# -----------------------------------------------------------------------------
+def delete(table, ids):
+    '''
+    Delete one element from the given table
+    '''
+
+    if len(ids) == 0: return
+
     # Search for element
-    e = table.find_one(id=id)
-    if e == None:
-        s = 'Error, the element with id={} does not exist in table {}'.format(id, table.name)
+    e = table.find(id=ids)
+    l = 0
+    for ee in e: l = l+1
+    if l != len(ids):
+        s = 'Error, some elements with id={} do not exist in table {}'.format(ids, table.name)
         raise_except(s)
 
     # delete
     try:
-        table.delete(id=id)
+        table.delete(id=ids)
     except Exception as e:
-        s = 'Error, cannot delete element {} in table {} (maybe it is used in another table ?)'.format(id, table.name)
+        s = 'Error, cannot delete element {} in table {} (maybe it is used in another table ?)'.format(ids, table.name)
         raise_except(s)
 
 

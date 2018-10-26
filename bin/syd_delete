@@ -9,7 +9,7 @@ import re
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('table_name')
-@click.argument('id') # FIXME -> allow several ids
+@click.argument('id', nargs=-1) # FIXME -> allow several ids
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
 @click.option('--silent/-s', default=False,
@@ -29,6 +29,7 @@ def syd_delete(table_name, id, db, silent):
         exit(0)
 
     # delete
+    if len(id) == 0: return
     syd.delete(db[table_name], id)
 
     # verbose
