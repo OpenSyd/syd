@@ -24,7 +24,6 @@ def syd_insert_image_from_dicom(dicomseries, db, pixel_type):
     db = syd.open_db(db_filename)
 
     # look and insert dicom
-    print(dicomseries)
     syd.insert_image_from_dicom(db, dicomseries, pixel_type)
 
 

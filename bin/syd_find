@@ -14,7 +14,9 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
 @click.option('--print_format', '-f', default='default',
               help='Print format')
-def syd_find(table_name, grep, db, print_format):
+@click.option('--delete/--no-delete', '-d', default=False,
+              help='Delete found elements')
+def syd_find(table_name, grep, db, print_format, delete):
     '''
     FIXME
     '''
@@ -28,26 +30,40 @@ def syd_find(table_name, grep, db, print_format):
         print('Table {} does not exist. Tables: {}'.format(table_name, db.tables))
         exit(0)
 
-    # print tables and columns
     table = db[table_name]
-    s = ''
-    for col in db[table_name].table.columns:
-        c = str(col)[len(table_name)+1:]
-        s = s+' '+c
-    print(s)
-
-
     elements = table.all()
     res = []
     if (grep == ''):
-        res = elements
+        res = [e for e in elements]
     else:
         for e in elements:
             s = ''.join(str(x) for x in e.values())
             if re.search(grep, s):
                 res.append(e)
 
+    if len(res) == 0:
+        return
+
+    # print tables and columns
+    s = ''
+    for col in db[table_name].table.columns:
+        c = str(col)[len(table_name)+1:]
+        s = s+c+' '
+    print(s)
+
+    # print
     syd.print_elements(table_name, print_format, res)
+
+    if len(res) == 1:
+        print('Found 1 element')
+    else:
+        print('Found {} elements'.format(len(res)))
+
+    if delete:
+        ids = [i['id'] for i in res]
+        syd.delete(db[table_name], ids)
+        print('Delete: ',ids)
+
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':

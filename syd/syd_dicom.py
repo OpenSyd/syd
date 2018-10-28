@@ -333,13 +333,7 @@ def create_dicom_file_info(db, sid, f, ds):
     }
 
     # folder : patient_name/date/modality
-    pname = db['Patient'].find_one(id=dicom_serie['patient_id'])['name']
-    date = dicom_serie['acquisition_date'].strftime('%Y-%m-%d')
-    modality = dicom_serie['modality']
-    info = db['Info'].find_one(id=1)
-    path = os.path.join(info['image_folder'],pname)
-    path = os.path.join(path,date)
-    path = os.path.join(path,modality)
+    path = get_dicom_serie_path(db, dicom_serie)
 
     # filename = basename
     filename = os.path.basename(f)
@@ -351,4 +345,16 @@ def create_dicom_file_info(db, sid, f, ds):
     }
 
     return dicom_file_info, file_info
+
+# -----------------------------------------------------------------------------
+def get_dicom_serie_path(db, dicom_serie):
+    '''
+    Get the file path of a DicomSerie
+    '''
+
+    pname = db['Patient'].find_one(id=dicom_serie['patient_id'])['name']
+    date = dicom_serie['acquisition_date'].strftime('%Y-%m-%d')
+    modality = dicom_serie['modality']
+    path = get_path(db, pname, date, modality)
+    return path
 

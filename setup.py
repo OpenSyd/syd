@@ -22,7 +22,8 @@ setuptools.setup(
         'dataset',
         'pydicom',
         'tqdm',
-        'colored'
+        'colored',
+        'itk'
       ],
     scripts=[
         'bin/syd_info',

@@ -2,6 +2,7 @@
 
 import datetime
 import colored
+import os
 
 # -----------------------------------------------------------------------------
 def str_to_date(str):
@@ -52,3 +53,10 @@ def raise_except(s):
     s = colored.stylize(s, color_error)
     raise Exception(s)
 
+# -----------------------------------------------------------------------------
+def get_path(db, pname, date, modality):
+    info = db['Info'].find_one(id=1)
+    path = os.path.join(info['image_folder'],pname)
+    path = os.path.join(path,date)
+    path = os.path.join(path,modality)
+    return path
