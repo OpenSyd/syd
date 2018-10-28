@@ -29,5 +29,6 @@ setuptools.setup(
         'bin/syd_find',
         'bin/syd_delete',
         'bin/syd_dicom_info',
-        'bin/syd_insert_dicom',]
+        'bin/syd_insert_dicom',
+        'bin/syd_insert_image_from_dicom']
 )

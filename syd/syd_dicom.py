@@ -11,7 +11,7 @@ from .syd_db import *
 from shutil import copyfile
 
 # -----------------------------------------------------------------------------
-def create_dicomserie_table(db):
+def create_dicom_serie_table(db):
     '''
     Create the DicomSerie table
     '''
@@ -41,13 +41,13 @@ def create_dicomserie_table(db):
     FOREIGN KEY(injection_id) REFERENCES Injection(id)\
     )'
     result = db.query(q)
-    dicomserie_table = db['DicomSerie']
-    dicomserie_table.create_column('acquisition_date', db.types.datetime)
-    dicomserie_table.create_column('reconstruction_date', db.types.datetime)
+    dicom_serie_table = db['DicomSerie']
+    dicom_serie_table.create_column('acquisition_date', db.types.datetime)
+    dicom_serie_table.create_column('reconstruction_date', db.types.datetime)
 
 
 # -----------------------------------------------------------------------------
-def create_dicomfile_table(db):
+def create_dicom_file_table(db):
     '''
     Create the DicomFile table
     '''
@@ -55,11 +55,11 @@ def create_dicomfile_table(db):
     # create DicomFile table
     q = 'CREATE TABLE DicomFile (\
     id INTEGER PRIMARY KEY NOT NULL,\
-    dicomserie_id INTEGER NOT NULL,\
+    dicom_serie_id INTEGER NOT NULL,\
     file_id INTEGER NOT NULL UNIQUE,\
     sop_uid INTEGER NOT NULL UNIQUE,\
     instance_number INTEGER NOT NULL,\
-    FOREIGN KEY(dicomserie_id) REFERENCES DicomSerie(id),\
+    FOREIGN KEY(dicom_serie_id) REFERENCES DicomSerie(id),\
     FOREIGN KEY(file_id) REFERENCES File(id)\
     )'
     result = db.query(q)
@@ -123,8 +123,12 @@ def insert_dicom(db, folder, patient_id=0):
 
     # create series
     print('Found {} Dicom Series'.format(len(series)))
+    ids = []
     for k,v in series.items():
-        insert_dicom_serie(db, v['f'], v['ds'], patient_id)
+        id = insert_dicom_serie(db, v['f'], v['ds'], patient_id)
+        ids.append(id)
+
+    return ids
 
 # -----------------------------------------------------------------------------
 def insert_dicom_serie(db, files, dicom_datasets, patient_id):
@@ -242,7 +246,7 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
     # insert file
     ids = syd.insert(db['File'], file_info)
 
-    # change file_id in dicomfile
+    # change file_id in dicom_file
     i=0
     for d,i in zip(dicom_file_info, ids):
         d['file_id'] = i
@@ -263,6 +267,8 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
                  dicom_serie['modality'],
                  dicom_serie['acquisition_date'],
                  len(dicom_file_info), inj_txt))
+
+    return dicom_serie['id']
 
 # -----------------------------------------------------------------------------
 def guess_patient_from_dicom(db, ds):
@@ -321,7 +327,7 @@ def create_dicom_file_info(db, sid, f, ds):
 
     dicom_serie = db['DicomSerie'].find_one(series_uid=sid)
     dicom_file_info = {
-        'dicomserie_id': dicom_serie['id'],
+        'dicom_serie_id': dicom_serie['id'],
         'sop_uid': ds[0x0008, 0x0018].value, # SOPInstanceUID
         'instance_number': ds.InstanceNumber
     }

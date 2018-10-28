@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import syd
+import click
+
+# -----------------------------------------------------------------------------
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument('dicomseries', nargs=-1)
+@click.option('--db', default='',
+              help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
+@click.option('--pixel_type', '-p', default='auto',
+              help='Set the pixel type: auto/short/float (default=auto)')
+def syd_insert_image_from_dicom(dicomseries, db, pixel_type):
+    '''
+    Convert dicom image to mhd image.
+
+    DICOMSERIES : list of DicomSerie ids
+    '''
+
+    # open the db
+    db_filename = syd.get_db_filename(db)
+    db = syd.open_db(db_filename)
+
+    # look and insert dicom
+    print(dicomseries)
+    syd.insert_image_from_dicom(db, dicomseries, pixel_type)
+
+
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    syd_insert_image_from_dicom()
+

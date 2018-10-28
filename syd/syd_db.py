@@ -13,6 +13,7 @@ from .syd_radionuclide import *
 from .syd_dicom import *
 from .syd_file import *
 from .syd_helpers import *
+from .syd_image import *
 
 # -----------------------------------------------------------------------------
 def create_db(filename):
@@ -56,9 +57,10 @@ def create_db(filename):
     create_patient_table(db)
     create_radionuclide_table(db)
     create_injection_table(db)
-    create_dicomserie_table(db)
-    create_dicomfile_table(db)
+    create_dicom_serie_table(db)
+    create_dicom_file_table(db)
     create_file_table(db)
+    create_image_table(db)
 
     return db
 
