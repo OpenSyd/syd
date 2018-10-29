@@ -212,3 +212,10 @@ def print_elements(table_name, print_format, elements):
         print(s)
 
 
+# -----------------------------------------------------------------------------
+def update_one(table, element):
+    '''
+    Update a single element according to the 'id'
+    '''
+    table.update(element, ['id'])
+
