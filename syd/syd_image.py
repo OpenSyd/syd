@@ -2,7 +2,8 @@
 
 import dataset
 import pydicom
-import itk
+import os
+import SimpleITK as sitk
 from .syd_db import *
 
 # -----------------------------------------------------------------------------
@@ -33,8 +34,8 @@ def create_image_table(db):
     FOREIGN KEY(file_raw_id) REFERENCES File(id)\
     )'
     result = db.query(q)
-    #dicom_serie_table = db['DicomSerie']
-    #dicom_serie_table.create_column('acquisition_date', db.types.datetime)
+    image_table = db['Image']
+    image_table.create_column('acquisition_date', db.types.datetime)
     #dicom_serie_table.create_column('reconstruction_date', db.types.datetime)
 
 
@@ -49,6 +50,18 @@ def insert_image_from_dicom(db, ids, pixel_type):
 
 
 # -----------------------------------------------------------------------------
+def build_image_path(db, image):
+    '''
+    Create the file path of an Image
+    '''
+
+    pname = db['Patient'].find_one(id=image['patient_id'])['name']
+    date = image['acquisition_date'].strftime('%Y-%m-%d')
+    modality = image['modality']
+    path = get_path(db, pname, date, modality)
+    return path
+
+# -----------------------------------------------------------------------------
 def insert_one_image_from_dicom(db, id, pixel_type):
     '''
     Convert one Dicom image to MHD image
@@ -60,42 +73,67 @@ def insert_one_image_from_dicom(db, id, pixel_type):
     print(dicom_serie)
     modality = dicom_serie['modality']
 
-    # read dicom image
-
-    # pixel_type
-
-    # write file
-
-    # create file mhd/raw
-    path = get_dicom_serie_path(db, dicom_serie)
-    img_info = { 'path': path, 'filename': 'not_yet'}
-    id_mhd = syd.insert_one(db['File'], img_info)
-    id_raw = syd.insert_one(db['File'], img_info)
-    img_info['id'] = id_mhd
-    img_info['filename'] = str(id_mhd)+'_'+modality+'.mhd'
-    i = db['File'].update(img_info, ['id'])
-    print(img_info)
-    img_info['id'] = id_raw
-    img_info['filename'] = str(id_raw)+'_'+modality+'.raw'
-    print(img_info)
-    db['File'].update(img_info, ['id'])
-    print(img_info)
-
     # create Image
-    img_info = {
+    img = {
         'patient_id': dicom_serie['patient_id'],
         'injection_id': dicom_serie['injection_id'],
         'dicom_serie_id': dicom_serie['id'],
-        'file_mhd_id': id_mhd,
-        'file_raw_id': id_raw,
-        'pixel_type': pixel_type,
-        'pixel_unit': pixel_unit,
-        'frame_of_reference_uid': dicom_serie['frame_of_reference_uid'],
-        'modality': modality
+        #'file_mhd_id': id_mhd,
+        #'file_raw_id': id_raw,
+        #'pixel_type': pixel_type,
+        #'pixel_unit': pixel_unit,
+        #'frame_of_reference_uid': dicom_serie['frame_of_reference_uid'],
+        'modality': modality,
+        'acquisition_date': dicom_serie['acquisition_date']
     }
-    print(img_info)
+    print(img)
 
     # insert Image
-    id = insert_one(db['Image'], img_info)
-    print(id)
+    img = syd.insert_one(db['Image'], img)
+    print(img)
+
+    # build path name
+    path = build_image_path(db, img)
+    print(path)
+
+    # create file mhd/raw
+    file_mhd = syd.new_file(db, path, 'not_yet')
+    file_raw = syd.new_file(db, path, 'not_yet')
+    print(file_mhd, file_raw)
+
+    id_mhd = file_mhd['id']
+    file_mhd['filename'] = str(id_mhd)+'_'+modality+'.mhd'
+    id_raw = file_raw['id']
+    file_raw['filename'] = str(id_raw)+'_'+modality+'.raw'
+
+    syd.update_one(db['File'], file_mhd)
+    syd.update_one(db['File'], file_raw)
+
+    print(file_mhd)
+    print(file_raw)
+
+    # get dicom files
+    dicom_files = db['DicomFile'].find(dicom_serie_id=dicom_serie['id'])
+    filenames = []
+    for df in dicom_files:
+        p = get_file_absolute_filename(db, df['file_id'])
+        filenames.append(p)
+
+    # read dicom image
+    image = None
+    if len(filenames) > 1:
+        series_reader = sitk.ImageSeriesReader()
+        series_reader.SetFileNames(filenames)
+        image = series_reader.Execute()
+    else:
+        image = sitk.ReadImage(filenames[0])
+
+    # pixel_type
+    # FIXME LATER
+
+    # write file
+    filepath = get_file_absolute_filename(db, id_mhd)
+    print('filepath', filepath)
+    #sitk.WriteImage(image, )
+    exit(0)
 
