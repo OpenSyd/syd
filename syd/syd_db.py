@@ -87,6 +87,17 @@ def open_db(filename):
     q = 'PRAGMA foreign_keys = ON;'
     db.query(q)
 
+    # add absolute filename in the database
+    if os.path.isabs(filename):
+        db.absolute_filename = filename
+    else:
+        db.absolute_filename = os.path.abspath(filename)
+
+    # add absolute folder
+    info = db['Info'].find_one(id=1)
+    folder = info['image_folder']
+    db.absolute_data_folder = os.path.join(os.path.dirname(db.absolute_filename), folder)
+
     return db
 
 # -----------------------------------------------------------------------------
@@ -112,16 +123,15 @@ def insert(table, elements):
     Bulk insert all elements in the table.
     Elements are given as vector of dictionary
     '''
-    ids = []
     try:
         with table.db as tx:
             for p in elements:
                 i = tx[table.name].insert(p)
-                ids.append(i)
+                p['id'] = i
     except Exception as e:
         s = 'cannot insert element: {}\n'.format(p)
         raise_except(s)
-    return ids
+    return elements
 
 # -----------------------------------------------------------------------------
 def insert_one(table, element):
@@ -129,8 +139,8 @@ def insert_one(table, element):
     Bulk insert one element in the table.
     '''
     elements = [element]
-    ids = insert(table, elements)
-    return ids[0]
+    e = insert(table, elements)
+    return e[0]
 
 
 # -----------------------------------------------------------------------------
@@ -200,4 +210,5 @@ def print_elements(table_name, print_format, elements):
     for e in elements:
         s = ' '.join(str(x) for x in e.values())
         print(s)
+
 

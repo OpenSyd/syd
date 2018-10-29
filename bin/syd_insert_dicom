@@ -24,7 +24,6 @@ def syd_insert_dicom(folder, db, patient):
     # look and insert dicom
     syd.insert_dicom(db, folder, patient)
 
-
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     syd_insert_dicom()

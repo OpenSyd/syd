@@ -123,15 +123,15 @@ def insert_dicom(db, folder, patient_id=0):
 
     # create series
     print('Found {} Dicom Series'.format(len(series)))
-    ids = []
+    dicom_series = []
     for k,v in series.items():
-        id = insert_dicom_serie(db, v['f'], v['ds'], patient_id)
-        ids.append(id)
+        ds = insert_dicom_serie(db, v['f'], v['ds'], patient_id)
+        dicom_series.append(ds)
 
-    return ids
+    return dicom_series
 
 # -----------------------------------------------------------------------------
-def insert_dicom_serie(db, files, dicom_datasets, patient_id):
+def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
     '''
     Insert one dicom serie, with all associated files
     If patient_id is 0, try to guess
@@ -146,7 +146,7 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
     dicom_serie = db['DicomSerie'].find_one(series_uid=sid)
     if dicom_serie is not None:
         print('The Dicom Serie already exists in the db, ignoring {} ({} files)'
-              .format(files[0], len(files)))
+              .format(filenames[0], len(filenames)))
         return
 
     # get patient_id
@@ -159,7 +159,7 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
     # guess fail ?
     if (patient_id == 0):
         print('The dicom serie {} is ignored'.format(sid))
-        print('In file: {}'.format(files[0]))
+        print('In file: {}'.format(filenames[0]))
         return
 
     # check if patient exist
@@ -223,14 +223,13 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
     }
 
     # insert the dicom serie
-    i = db['DicomSerie'].insert(info)
-    dicom_serie = db['DicomSerie'].find_one(id=i)
+    dicom_serie = syd.insert_one(db['DicomSerie'], info)
 
     # create DicomFile and File
     dicom_file_info = []
     file_info = []
     i=0
-    for f in files:
+    for f in filenames:
         ds = dicom_datasets[i]
         sop_uid = ds[0x0008, 0x0018].value # SOPInstanceUID
         df = db['DicomFile'].find_one(sop_uid=sop_uid)
@@ -244,20 +243,21 @@ def insert_dicom_serie(db, files, dicom_datasets, patient_id):
         i = i+1
 
     # insert file
-    ids = syd.insert(db['File'], file_info)
+    files = syd.insert(db['File'], file_info)
 
     # change file_id in dicom_file
     i=0
-    for d,i in zip(dicom_file_info, ids):
-        d['file_id'] = i
+    for d,f in zip(dicom_file_info, files):
+        d['file_id'] = f['id']
     syd.insert(db['DicomFile'], dicom_file_info)
 
     # copy file
-    for df, f in zip(file_info, files):
+    for df, f in zip(file_info, filenames):
         src = f
-        dst = os.path.join(df['path'], df['filename'])
-        if not os.path.exists(df['path']):
-            os.makedirs(df['path'])
+        dst_folder = os.path.join(db.absolute_data_folder, df['path'])
+        dst = os.path.join(dst_folder, df['filename'])
+        if not os.path.exists(dst_folder):
+            os.makedirs(dst_folder)
         #if os.path.exists(dst): FIXME overwrite ?
         copyfile(src, dst)
 
@@ -333,7 +333,7 @@ def create_dicom_file_info(db, sid, f, ds):
     }
 
     # folder : patient_name/date/modality
-    path = get_dicom_serie_path(db, dicom_serie)
+    path = build_dicom_serie_path(db, dicom_serie)
 
     # filename = basename
     filename = os.path.basename(f)
@@ -347,14 +347,15 @@ def create_dicom_file_info(db, sid, f, ds):
     return dicom_file_info, file_info
 
 # -----------------------------------------------------------------------------
-def get_dicom_serie_path(db, dicom_serie):
+def build_dicom_serie_path(db, dicom_serie):
     '''
-    Get the file path of a DicomSerie
+    Create the file path of a DicomSerie
     '''
 
     pname = db['Patient'].find_one(id=dicom_serie['patient_id'])['name']
     date = dicom_serie['acquisition_date'].strftime('%Y-%m-%d')
     modality = dicom_serie['modality']
     path = get_path(db, pname, date, modality)
+    path = os.path.join(path, 'dicom')
     return path
 
