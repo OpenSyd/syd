@@ -23,7 +23,8 @@ setuptools.setup(
         'pydicom',
         'tqdm',
         'colored',
-        'itk'
+        'itk',
+        'SimpleITK'
       ],
     scripts=[
         'bin/syd_info',
