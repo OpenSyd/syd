@@ -19,13 +19,12 @@ def create_file_table(db):
 
 
 # -----------------------------------------------------------------------------
-def get_file_absolute_filename(db, id):
+def get_file_absolute_filename(db, file):
     '''
-    Return the absolute file path of the give file id
+    Return the absolute file path of the given file
     '''
-    f = db['File'].find_one(id=id)
-    p = os.path.join(db.absolute_data_folder, f['path'])
-    p = os.path.join(p, f['filename'])
+    p = os.path.join(db.absolute_data_folder, file['path'])
+    p = os.path.join(p, file['filename'])
     return p
 
 

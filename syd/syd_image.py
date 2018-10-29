@@ -73,6 +73,15 @@ def insert_one_image_from_dicom(db, id, pixel_type):
     print(dicom_serie)
     modality = dicom_serie['modality']
 
+    # guess pixel unit FIXME --> check dicom tag ?
+    pixel_unit = 'undefined'
+    if modality == 'CT':
+        pixel_unit = 'HU'
+    if modality == 'NM':
+        pixel_unit = 'counts'
+    if modality == 'PT':
+        pixel_unit = 'MBq/mL'
+
     # create Image
     img = {
         'patient_id': dicom_serie['patient_id'],
@@ -81,8 +90,8 @@ def insert_one_image_from_dicom(db, id, pixel_type):
         #'file_mhd_id': id_mhd,
         #'file_raw_id': id_raw,
         #'pixel_type': pixel_type,
-        #'pixel_unit': pixel_unit,
-        #'frame_of_reference_uid': dicom_serie['frame_of_reference_uid'],
+        'pixel_unit': pixel_unit,
+        'frame_of_reference_uid': dicom_serie['frame_of_reference_uid'],
         'modality': modality,
         'acquisition_date': dicom_serie['acquisition_date']
     }
@@ -101,10 +110,9 @@ def insert_one_image_from_dicom(db, id, pixel_type):
     file_raw = syd.new_file(db, path, 'not_yet')
     print(file_mhd, file_raw)
 
-    id_mhd = file_mhd['id']
-    file_mhd['filename'] = str(id_mhd)+'_'+modality+'.mhd'
-    id_raw = file_raw['id']
-    file_raw['filename'] = str(id_raw)+'_'+modality+'.raw'
+    id = img['id']
+    file_mhd['filename'] = str(id)+'_'+modality+'.mhd'
+    file_raw['filename'] = str(id)+'_'+modality+'.raw'
 
     syd.update_one(db['File'], file_mhd)
     syd.update_one(db['File'], file_raw)
@@ -116,7 +124,8 @@ def insert_one_image_from_dicom(db, id, pixel_type):
     dicom_files = db['DicomFile'].find(dicom_serie_id=dicom_serie['id'])
     filenames = []
     for df in dicom_files:
-        p = get_file_absolute_filename(db, df['file_id'])
+        f = db['File'].find_one(id=df['file_id'])
+        p = get_file_absolute_filename(db, f)
         filenames.append(p)
 
     # read dicom image
@@ -129,11 +138,20 @@ def insert_one_image_from_dicom(db, id, pixel_type):
         image = sitk.ReadImage(filenames[0])
 
     # pixel_type
-    # FIXME LATER
+    pixel_type = image.GetPixelIDTypeAsString()
 
     # write file
-    filepath = get_file_absolute_filename(db, id_mhd)
+    filepath = get_file_absolute_filename(db, file_mhd)
     print('filepath', filepath)
-    #sitk.WriteImage(image, )
-    exit(0)
+    sitk.WriteImage(image, filepath)
+
+    # update img
+    img['file_mhd_id'] = file_mhd['id']
+    img['file_raw_id'] = file_raw['id']
+    img['pixel_type'] = pixel_type
+    syd.update_one(db['Image'], img)
+
+    print(img)
+
+    return img
 
