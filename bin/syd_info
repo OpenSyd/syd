@@ -18,6 +18,10 @@ def syd_info(db):
     db_filename = syd.get_db_filename(db)
     db = syd.open_db(db_filename)
 
+    # print file and folder
+    print("Database: {}".format(db.absolute_filename))
+    print("Image folder: {}".format(db.absolute_data_folder))
+
     # print tables and columns
     for table_name in db.tables:
         s = table_name+' '+str(len(db[table_name]))+' :'
@@ -25,7 +29,6 @@ def syd_info(db):
             c = str(col)[len(table_name)+1:]
             s = s+' '+c
         print(s)
-
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
