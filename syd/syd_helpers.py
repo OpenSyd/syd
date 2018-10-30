@@ -54,7 +54,7 @@ def raise_except(s):
     raise Exception(s)
 
 # -----------------------------------------------------------------------------
-def get_path(db, pname, date, modality):
-    path = os.path.join(pname, date)
-    path = os.path.join(path, modality)
-    return path
+def build_folder(db, pname, date, modality):
+    folder = os.path.join(pname, date)
+    folder = os.path.join(folder, modality)
+    return folder

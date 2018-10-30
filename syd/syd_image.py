@@ -50,16 +50,16 @@ def insert_image_from_dicom(db, ids, pixel_type):
 
 
 # -----------------------------------------------------------------------------
-def build_image_path(db, image):
+def build_image_folder(db, image):
     '''
-    Create the file path of an Image
+    Create the file folder of an Image
     '''
 
     pname = db['Patient'].find_one(id=image['patient_id'])['name']
     date = image['acquisition_date'].strftime('%Y-%m-%d')
     modality = image['modality']
-    path = get_path(db, pname, date, modality)
-    return path
+    folder = build_folder(db, pname, date, modality)
+    return folder
 
 # -----------------------------------------------------------------------------
 def insert_one_image_from_dicom(db, id, pixel_type):
@@ -67,10 +67,10 @@ def insert_one_image_from_dicom(db, id, pixel_type):
     Convert one Dicom image to MHD image
     '''
 
-    print('insert_one_image_from_dicom', id, pixel_type)
-
+    # get the dicom_serie
     dicom_serie = db['DicomSerie'].find_one(id=id)
-    print(dicom_serie)
+
+    # modality
     modality = dicom_serie['modality']
 
     # guess pixel unit FIXME --> check dicom tag ?
@@ -95,47 +95,46 @@ def insert_one_image_from_dicom(db, id, pixel_type):
         'modality': modality,
         'acquisition_date': dicom_serie['acquisition_date']
     }
-    print(img)
 
     # insert Image
     img = syd.insert_one(db['Image'], img)
-    print(img)
 
-    # build path name
-    path = build_image_path(db, img)
-    print(path)
+    # build folder name (pname/date/modality)
+    folder = build_image_folder(db, img)
 
     # create file mhd/raw
-    file_mhd = syd.new_file(db, path, 'not_yet')
-    file_raw = syd.new_file(db, path, 'not_yet')
-    print(file_mhd, file_raw)
+    file_mhd = syd.new_file(db, folder, 'not_yet')
+    file_raw = syd.new_file(db, folder, 'not_yet')
 
+    # use id in the filename
     id = img['id']
     file_mhd['filename'] = str(id)+'_'+modality+'.mhd'
     file_raw['filename'] = str(id)+'_'+modality+'.raw'
-
     syd.update_one(db['File'], file_mhd)
     syd.update_one(db['File'], file_raw)
 
-    print(file_mhd)
-    print(file_raw)
-
     # get dicom files
-    dicom_files = db['DicomFile'].find(dicom_serie_id=dicom_serie['id'])
-    filenames = []
-    for df in dicom_files:
-        f = db['File'].find_one(id=df['file_id'])
-        p = get_file_absolute_filename(db, f)
-        filenames.append(p)
+    files = syd.get_dicom_serie_files(db, dicom_serie)
+    if len(files) == 0:
+        s = 'Error, no file associated with this dicom serie'
+        raise_except(s)
+
+    # get folder
+    folder = dicom_serie['folder']
+    folder = os.path.join(db.absolute_data_folder, folder)
+    suid = dicom_serie['series_uid']
 
     # read dicom image
     image = None
-    if len(filenames) > 1:
+    if len(files) > 1:
+        # sort filenames
+        series_file_names = sitk.ImageSeriesReader.GetGDCMSeriesFileNames(folder, suid)
         series_reader = sitk.ImageSeriesReader()
-        series_reader.SetFileNames(filenames)
+        series_reader.SetFileNames(series_file_names)
         image = series_reader.Execute()
     else:
-        image = sitk.ReadImage(filenames[0])
+        filename = get_file_absolute_filename(db, files[0])
+        image = sitk.ReadImage(filename)
 
     # pixel_type
     pixel_type = image.GetPixelIDTypeAsString()
@@ -150,8 +149,6 @@ def insert_one_image_from_dicom(db, id, pixel_type):
     img['file_raw_id'] = file_raw['id']
     img['pixel_type'] = pixel_type
     syd.update_one(db['Image'], img)
-
-    print(img)
 
     return img
 

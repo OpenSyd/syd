@@ -37,6 +37,7 @@ def create_dicom_serie_table(db):
     study_description TEXT,\
     study_name TEXT,\
     dataset_name TEXT,\
+    folder TEXT,\
     FOREIGN KEY(patient_id) REFERENCES Patient(id),\
     FOREIGN KEY(injection_id) REFERENCES Injection(id)\
     )'
@@ -206,6 +207,13 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
             injection_id = injection['id']
             inj_txt = '(injection {})'.format(injection['id'])
 
+    # build folder
+    pname = db['Patient'].find_one(id=patient_id)['name']
+    date = acquisition_date.strftime('%Y-%m-%d')
+    modality = ds.Modality
+    folder = build_folder(db, pname, date, modality)
+    folder = os.path.join(folder, 'dicom')
+
     # build info
     info = {
         'patient_id': patient_id,
@@ -213,13 +221,14 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
         'series_uid': ds.SeriesInstanceUID,
         'study_uid':  ds.StudyInstanceUID,
         'frame_of_reference_uid':  ds.FrameOfReferenceUID,
-        'modality': ds.Modality,
+        'modality': modality,
         'series_description': ds.SeriesDescription,
         'study_description': ds.StudyDescription,
         'study_name': study_name,
         'dataset_name': dataset_name,
         'acquisition_date': acquisition_date,
         'reconstruction_date': reconstruction_date,
+        'folder': folder
     }
 
     # insert the dicom serie
@@ -236,7 +245,7 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
         if df is not None:
             print('Warning, a file with same sop_uid already exist, ignoring {}'.format(f))
             continue
-        df, fi = create_dicom_file_info(db, sid, f, ds)
+        df, fi = create_dicom_file_info(db, sid, folder, f, ds)
         if df is not None:
             dicom_file_info.append(df)
             file_info.append(fi)
@@ -254,7 +263,7 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
     # copy file
     for df, f in zip(file_info, filenames):
         src = f
-        dst_folder = os.path.join(db.absolute_data_folder, df['path'])
+        dst_folder = os.path.join(db.absolute_data_folder, df['folder'])
         dst = os.path.join(dst_folder, df['filename'])
         if not os.path.exists(dst_folder):
             os.makedirs(dst_folder)
@@ -320,7 +329,7 @@ def guess_injection_from_dicom(db, ds, patient):
 
 
 # -----------------------------------------------------------------------------
-def create_dicom_file_info(db, sid, f, ds):
+def create_dicom_file_info(db, sid, folder, f, ds):
     '''
     Create dico with DicomFile and File information to be inserted
     '''
@@ -332,30 +341,35 @@ def create_dicom_file_info(db, sid, f, ds):
         'instance_number': ds.InstanceNumber
     }
 
-    # folder : patient_name/date/modality
-    path = build_dicom_serie_path(db, dicom_serie)
-
     # filename = basename
     filename = os.path.basename(f)
 
     file_info = {
         'filename': filename,
-        'path': path,
+        'folder': folder,
         #'md5': md5 # later
     }
 
     return dicom_file_info, file_info
 
+
 # -----------------------------------------------------------------------------
-def build_dicom_serie_path(db, dicom_serie):
+def get_dicom_serie_files(db, dicom_serie):
     '''
-    Create the file path of a DicomSerie
+    Return the list of files associated with the dicom_serie
     '''
 
-    pname = db['Patient'].find_one(id=dicom_serie['patient_id'])['name']
-    date = dicom_serie['acquisition_date'].strftime('%Y-%m-%d')
-    modality = dicom_serie['modality']
-    path = get_path(db, pname, date, modality)
-    path = os.path.join(path, 'dicom')
-    return path
+    # get all dicom files
+    dicom_files = db['DicomFile'].find(dicom_serie_id=dicom_serie['id'])
 
+    # get all associated id of the files
+    fids = []
+    for df in dicom_files:
+        fids.append(df['file_id'])
+
+    # find files
+    res = db['File'].find(id=fids)
+    files = []
+    for r in res:
+        files.append(r)
+    return files
