@@ -10,9 +10,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.argument('dicomseries', nargs=-1)
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
-@click.option('--pixel_type', '-p', default='auto',
-              help='Set the pixel type: auto/short/float (default=auto)')
-def syd_insert_image_from_dicom(dicomseries, db, pixel_type):
+def syd_insert_image_from_dicom(dicomseries, db):
     '''
     Convert dicom image to mhd image.
 
@@ -23,9 +21,20 @@ def syd_insert_image_from_dicom(dicomseries, db, pixel_type):
     db_filename = syd.get_db_filename(db)
     db = syd.open_db(db_filename)
 
-    # look and insert dicom
-    syd.insert_image_from_dicom(db, dicomseries, pixel_type)
+    # get the dicom_series
+    dicom_series = db['DicomSerie'].find(id=dicomseries)
 
+    # look and insert dicom
+    n = 0
+    for dicom_serie in dicom_series:
+        im = syd.insert_image_from_dicom(db, dicom_serie)
+        p = syd.get_image_patient(db, im)
+        f = syd.get_image_filename(db, im)
+        print('Inserted image {} {} {} {}'.format(im['id'], p['name'], im['modality'], f))
+        n = n +1
+
+    if n == 0:
+        print('No dicom series found with id {}.'.format(dicomseries))
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':

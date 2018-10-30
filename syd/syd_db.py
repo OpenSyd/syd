@@ -217,5 +217,9 @@ def update_one(table, element):
     '''
     Update a single element according to the 'id'
     '''
-    table.update(element, ['id'])
 
+    try:
+        table.update(element, ['id'])
+    except:
+        s = 'Error while updating {}, id not found ?'.format(element)
+        raise_except(s)

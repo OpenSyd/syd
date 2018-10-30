@@ -2,7 +2,6 @@ FIXME
 
 SYD PY
 
-
 # Main API
 
 Create a new empty DB.
@@ -32,9 +31,33 @@ syd.delete_one(db['Patient'], id)
 ```
 
 
-FIXME UPDATE 
+Update element in a table, the input is a dict, with 'id' key. 
 
+```
+syd.update_one(db['Patient'], patient)
+```
 
+# Dicom API
 
+Search for all dicom series in the folder and add it to the db. Dicom are associated with patient_id (guess if == 0). 
+
+```
+syd.insert_dicom(db, folder, patient_id)
+```
+
+Helper to get all files associated with a dicom serie.
+
+```
+syd.get_dicom_serie_files(db, dicom_serie)
+```
+
+# Image API
+
+Convert dicom series into image. 
+
+```
+syd.insert_one_image_from_dicom(db, id)
+syd.insert_image_from_dicom(db, ids)
+```
 
 

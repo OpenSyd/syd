@@ -40,16 +40,6 @@ def create_image_table(db):
 
 
 # -----------------------------------------------------------------------------
-def insert_image_from_dicom(db, ids, pixel_type):
-    '''
-    Convert several Dicom images to MHD images
-    '''
-
-    for id in ids:
-        insert_one_image_from_dicom(db, id, pixel_type)
-
-
-# -----------------------------------------------------------------------------
 def build_image_folder(db, image):
     '''
     Create the file folder of an Image
@@ -62,13 +52,10 @@ def build_image_folder(db, image):
     return folder
 
 # -----------------------------------------------------------------------------
-def insert_one_image_from_dicom(db, id, pixel_type):
+def insert_image_from_dicom(db, dicom_serie):
     '''
     Convert one Dicom image to MHD image
     '''
-
-    # get the dicom_serie
-    dicom_serie = db['DicomSerie'].find_one(id=id)
 
     # modality
     modality = dicom_serie['modality']
@@ -141,7 +128,6 @@ def insert_one_image_from_dicom(db, id, pixel_type):
 
     # write file
     filepath = get_file_absolute_filename(db, file_mhd)
-    print('filepath', filepath)
     sitk.WriteImage(image, filepath)
 
     # update img
@@ -151,4 +137,21 @@ def insert_one_image_from_dicom(db, id, pixel_type):
     syd.update_one(db['Image'], img)
 
     return img
+
+# -----------------------------------------------------------------------------
+def get_image_patient(db, image):
+    '''
+    Retrieve the patient associated with the image
+    '''
+    patient = db['Patient'].find_one(id=image['patient_id'])
+    return patient
+
+# -----------------------------------------------------------------------------
+def get_image_filename(db, image):
+    '''
+    Retrieve the filename associated with the image
+    '''
+    file_mhd = db['File'].find_one(id=image['file_mhd_id'])
+    filepath = get_file_absolute_filename(db, file_mhd)
+    return filepath
 

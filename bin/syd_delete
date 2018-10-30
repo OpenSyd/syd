@@ -28,8 +28,10 @@ def syd_delete(table_name, id, db, silent):
         print('Error, table {} does not exist. Tables: {}'.format(table_name, db.tables))
         exit(0)
 
-    # delete
+    # do nothing if no id
     if len(id) == 0: return
+
+    # delete
     syd.delete(db[table_name], id)
 
     # verbose
