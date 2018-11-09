@@ -9,16 +9,20 @@ import re
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('table_name')
-@click.argument('grep', default='')
+@click.argument('grep', nargs=-1)
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
 @click.option('--print_format', '-f', default='default',
               help='Print format')
 @click.option('--delete/--no-delete', '-d', default=False,
               help='Delete found elements')
-def syd_find(table_name, grep, db, print_format, delete):
+@click.option('--id/--no-id', '-i', default=False,
+              help='If true, only display results id (for piped commands)')
+def syd_find(table_name, grep, db, print_format, delete, id):
     '''
     FIXME
+
+    grep: display results that match all (AND) words given. For OR, use something like "A|B"
     '''
 
     # open the db
@@ -33,16 +37,28 @@ def syd_find(table_name, grep, db, print_format, delete):
     table = db[table_name]
     elements = table.all()
     res = []
-    if (grep == ''):
+    if len(grep) == 0:
         res = [e for e in elements]
     else:
         for e in elements:
             s = ''.join(str(x) for x in e.values())
-            if re.search(grep, s):
+            found=True
+            for g in grep:
+                if not re.search(g, s):
+                    found=False
+                    break
+            if found:
                 res.append(e)
 
     if len(res) == 0:
         return
+
+    if id:
+        s=''
+        for e in res:
+            s = s+str(e['id'])+' '
+        print(s)
+        exit()
 
     # print tables and columns
     s = ''
