@@ -123,8 +123,16 @@ def insert_image_from_dicom(db, dicom_serie):
         filename = get_file_absolute_filename(db, files[0])
         image = sitk.ReadImage(filename)
 
-    # pixel_type
+    # pixel_type (ignored)
     pixel_type = image.GetPixelIDTypeAsString()
+
+    # convert: assume only 2 type short for CT and float for everything else
+    if modality == 'CT':
+        pixel_type = 'signed_short'
+        image = sitk.Cast(sitk.RescaleIntensity(image), sitk.sitkInt16)
+    else:
+        pixel_type = 'float'
+        image = sitk.Cast(sitk.RescaleIntensity(image), sitk.sitkFloat32)
 
     # write file
     filepath = get_file_absolute_filename(db, file_mhd)
@@ -141,7 +149,7 @@ def insert_image_from_dicom(db, dicom_serie):
 # -----------------------------------------------------------------------------
 def get_image_patient(db, image):
     '''
-    Retrieve the patient associated with the image
+    Retrieve the patient associated with the image FIXME ? change to get(db, element, "Patient")
     '''
     patient = db['Patient'].find_one(id=image['patient_id'])
     return patient
