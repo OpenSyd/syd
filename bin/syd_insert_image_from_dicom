@@ -17,6 +17,10 @@ def syd_insert_image_from_dicom(dicomseries, db):
     DICOMSERIES : list of DicomSerie ids
     '''
 
+    # check input
+    if len(dicomseries) == 0:
+        syd.fatal('Please provide at least one id.')
+
     # open the db
     db_filename = syd.get_db_filename(db)
     db = syd.open_db(db_filename)
