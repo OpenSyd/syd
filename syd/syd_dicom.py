@@ -31,7 +31,7 @@ def create_dicom_serie_table(db):
     injection_id INTEGER,\
     series_uid INTEGER NOT NULL UNIQUE,\
     study_uid INTEGER NOT NULL,\
-    frame_of_reference_uid INTEGER NOT NULL,\
+    frame_of_reference_uid INTEGER,\
     modality TEXT,\
     series_description TEXT,\
     study_description TEXT,\
@@ -214,13 +214,19 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
     folder = build_folder(db, pname, date, modality)
     folder = os.path.join(folder, 'dicom')
 
+    # get values that may be none
+    try:
+        frame_of_reference_uid = ds.FrameOfReferenceUID
+    except:
+        frame_of_reference_uid = None
+
     # build info
     info = {
         'patient_id': patient_id,
         'injection_id': injection_id,
         'series_uid': ds.SeriesInstanceUID,
         'study_uid':  ds.StudyInstanceUID,
-        'frame_of_reference_uid':  ds.FrameOfReferenceUID,
+        'frame_of_reference_uid':  frame_of_reference_uid,
         'modality': modality,
         'series_description': ds.SeriesDescription,
         'study_description': ds.StudyDescription,
