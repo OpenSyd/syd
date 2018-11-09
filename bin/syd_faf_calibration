@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import syd
+import click
+
+# -----------------------------------------------------------------------------
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument('id_planar')
+@click.argument('id_spect')
+#@click.argument('id_ct') ## auto
+@click.option('--db', default='',
+              help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
+def syd_faf_calibration(id_planar, id_spect, db):
+    '''
+    FIXME
+    '''
+
+    # open the db
+    db_filename = syd.get_db_filename(db)
+    db = syd.open_db(db_filename)
+
+    # get images
+    planar = db['Image'].find_one(id=id_planar)
+    spect = db['Image'].find_one(id=id_spect)
+    ct = db['Image'].find_one(frame_of_reference_uid=spect['frame_of_reference_uid'])
+    print('planar', planar)
+    print('spect', spect)
+    print('ct', ct)
+
+    # go
+    options = {}
+    syd.faf_calibration(db, planar, spect, ct, options)
+
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    syd_faf_calibration()
+
