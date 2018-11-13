@@ -56,8 +56,18 @@ syd.get_dicom_serie_files(db, dicom_serie)
 Convert dicom series into image. 
 
 ```
-syd.insert_one_image_from_dicom(db, id)
-syd.insert_image_from_dicom(db, ids)
+syd.insert_image_from_dicom(db, dicom_serie)
 ```
 
+Helpers to get linked elements.
+
+```
+patient = syd.get_image_patient(db, image)
+filename = syd.get_image_filename(db, image)
+```
+
+FIXME
+syd.insert_image(db, filename, patient_id)
+syd.update_image(image, dicom_serie)
+what about img size spacing etc ? keep in db ? 
 

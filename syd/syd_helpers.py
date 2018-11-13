@@ -3,6 +3,8 @@
 import datetime
 import colored
 import os
+from tokenize import tokenize, NUMBER
+from io import BytesIO
 
 # -----------------------------------------------------------------------------
 def str_to_date(str):
@@ -58,3 +60,15 @@ def build_folder(db, pname, date, modality):
     folder = os.path.join(pname, date)
     folder = os.path.join(folder, modality)
     return folder
+
+
+# -----------------------------------------------------------------------------
+def parse_piped_input(l):
+    if not l:
+        l = input()
+        dd = tokenize(BytesIO(l.encode('utf-8')).readline)
+        l = []
+        for toknum, tokval, _, _, _ in dd:
+            if toknum == NUMBER:
+                l.append(tokval)
+        return l

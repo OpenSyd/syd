@@ -7,7 +7,8 @@ import click
 # -----------------------------------------------------------------------------
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command(context_settings=CONTEXT_SETTINGS)
-@click.argument('dicomseries', nargs=-1)
+#@click.argument('dicomseries', nargs=-1)
+@click.argument('dicomseries', required=False)
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
 def syd_insert_image_from_dicom(dicomseries, db):
@@ -18,6 +19,7 @@ def syd_insert_image_from_dicom(dicomseries, db):
     '''
 
     # check input
+    dicomseries = syd.parse_piped_input(dicomseries)
     if len(dicomseries) == 0:
         syd.fatal('Please provide at least one id.')
 
@@ -34,7 +36,8 @@ def syd_insert_image_from_dicom(dicomseries, db):
         im = syd.insert_image_from_dicom(db, dicom_serie)
         p = syd.get_image_patient(db, im)
         f = syd.get_image_filename(db, im)
-        print('Inserted image {} {} {} {}'.format(im['id'], p['name'], im['modality'], f))
+        print('Inserted image {} {} {} {} from dicom {}'
+              .format(im['id'], p['name'], im['modality'], f, dicom_serie['id']))
         n = n +1
 
     if n == 0:
