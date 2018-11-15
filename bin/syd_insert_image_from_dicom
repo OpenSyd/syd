@@ -7,8 +7,8 @@ import click
 # -----------------------------------------------------------------------------
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command(context_settings=CONTEXT_SETTINGS)
-#@click.argument('dicomseries', nargs=-1)
-@click.argument('dicomseries', required=False)
+@click.argument('dicomseries', nargs=-1)
+#@click.argument('dicomseries', required=False)
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
 def syd_insert_image_from_dicom(dicomseries, db):

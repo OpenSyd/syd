@@ -64,6 +64,8 @@ def build_folder(db, pname, date, modality):
 
 # -----------------------------------------------------------------------------
 def parse_piped_input(l):
+    # if input is void, we parse piped input as a string
+    # and extract all ids
     if not l:
         l = input()
         dd = tokenize(BytesIO(l.encode('utf-8')).readline)
@@ -71,4 +73,4 @@ def parse_piped_input(l):
         for toknum, tokval, _, _, _ in dd:
             if toknum == NUMBER:
                 l.append(tokval)
-        return l
+    return l
