@@ -13,3 +13,4 @@ from .syd_dicom import *
 from .syd_file import *
 from .syd_image import *
 from .syd_faf_calibration import *
+from .syd_tag import *
