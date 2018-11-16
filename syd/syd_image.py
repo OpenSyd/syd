@@ -113,8 +113,6 @@ def insert_image_from_dicom(db, dicom_serie):
 
     # read dicom image
     image = None
-    print(files)
-    print(len(files))
     if len(files) > 1:
         # sort filenames
         series_file_names = sitk.ImageSeriesReader.GetGDCMSeriesFileNames(folder, suid)
@@ -124,8 +122,6 @@ def insert_image_from_dicom(db, dicom_serie):
     else:
         filename = get_file_absolute_filename(db, files[0])
         image = sitk.ReadImage(filename)
-
-    print(image)
 
     # pixel_type (ignored)
     pixel_type = image.GetPixelIDTypeAsString()

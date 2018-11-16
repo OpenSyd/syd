@@ -4,6 +4,7 @@
 import syd
 import click
 import re
+import os
 
 # -----------------------------------------------------------------------------
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -18,7 +19,9 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
               help='Delete found elements')
 @click.option('--id/--no-id', '-i', default=False,
               help='If true, only display results id (for piped commands)')
-def syd_find(table_name, grep, db, print_format, delete, id):
+@click.option('--vv/--no-vv', default=False,
+              help='Try to open in VV')
+def syd_find(table_name, grep, db, print_format, delete, id, vv):
     '''
     FIXME
 
@@ -29,7 +32,7 @@ def syd_find(table_name, grep, db, print_format, delete, id):
     db_filename = syd.get_db_filename(db)
     db = syd.open_db(db_filename)
 
-    # FIXME check table exist
+    # check table exist FIXME --> check lowercase ?
     if not table_name in db:
         print('Table {} does not exist. Tables: {}'.format(table_name, db.tables))
         exit(0)
@@ -70,6 +73,20 @@ def syd_find(table_name, grep, db, print_format, delete, id):
     # print
     syd.print_elements(table_name, print_format, res)
 
+    # vv ?
+    if vv:
+        filenames = ''
+        for e in res:
+            try:
+                filename = syd.get_image_filename(db, e)
+                filenames = filenames + ' ' + filename
+            except:
+                filename = '' ## nothing
+        if filenames != '':
+            print('vv '+filenames)
+            os.system('vv '+filenames)
+
+    # print nb found
     if len(res) == 1:
         print('Found 1 element')
     else:
