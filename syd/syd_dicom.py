@@ -24,12 +24,16 @@ def create_dicom_serie_table(db):
     # table_height_in_mm rotation_angle real_world_value_slope
     # real_world_value_intercept
 
+    # WARNING series_uid is not unique ! Thw DicomSerie may be different with
+    # the same DicomSerie
+
     # create DicomSerie table
     q = 'CREATE TABLE DicomSerie (\
     id INTEGER PRIMARY KEY NOT NULL,\
     patient_id INTEGER,\
     injection_id INTEGER,\
-    series_uid INTEGER NOT NULL UNIQUE,\
+    series_uid INTEGER NOT NULL,\
+    sop_uid INTEGER NOT NULL UNIQUE,\
     study_uid INTEGER NOT NULL,\
     frame_of_reference_uid INTEGER,\
     modality TEXT,\
@@ -96,12 +100,16 @@ def insert_dicom(db, folder, patient_id=0):
             ds = pydicom.read_file(f)
             try:
                 sid = ds.data_element("SeriesInstanceUID").value
+                sopid = ds.data_element("SOPInstanceUID").value
+                modality = ds.Modality
             except:
                 tqdm.write('Ignoring {}: cannot find SeriesInstanceUID'.format(f))
             # ignore unmanaged modality
-            modality = ds.Modality
-            if (modality == 'CT' or modality == 'PT' or modality == 'NM'):
-                s = {'sid':sid, 'f':f, 'ds': ds}
+            if (modality == 'CT' or modality == 'PT' or modality == 'NM' or modality == 'OT'):
+                if (modality == 'CT'):
+                    s = {'sid':sid, 'f':f, 'ds': ds}
+                else:
+                    s = {'sid':sopid, 'f':f, 'ds': ds}
                 dicoms.append(s)
             else:
                 tqdm.write('Ignoring {}: modality is {}'.format(f,modality))
@@ -115,6 +123,7 @@ def insert_dicom(db, folder, patient_id=0):
     series = defaultdict(list)
     for d in dicoms:
         sid = d['sid']
+        #sop = d['sopid']
         if sid in series:
             a = series[sid]
             a['f'].append(d['f'])
@@ -143,12 +152,21 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
     ds = dicom_datasets[0]
     sid = ds.data_element('SeriesInstanceUID').value
 
-    # check if this series already exist
-    dicom_serie = db['DicomSerie'].find_one(series_uid=sid)
-    if dicom_serie is not None:
-        print('The Dicom Serie already exists in the db, ignoring {} ({} files)'
-              .format(filenames[0], len(filenames)))
-        return
+    # check if this series already exist (only for CT)
+    if ds.Modality == 'CT':
+        dicom_serie = db['DicomSerie'].find_one(series_uid=sid)
+        if dicom_serie is not None:
+            print('The Dicom Serie already exists in the db, ignoring {} ({} files)'
+                  .format(filenames[0], len(filenames)))
+            return
+    else:
+        # for other image check SOP, assume a single image per DicomSeries
+        sid = ds.data_element('SOPInstanceUID').value
+        dicom_serie = db['DicomSerie'].find_one(sop_uid=sid)
+        if dicom_serie is not None:
+            print('The Dicom Serie (same SOP) already exists in the db, ignoring {} ({} files)'
+                  .format(filenames[0], len(filenames)))
+            return
 
     # get patient_id
     patient = None
@@ -200,7 +218,7 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
     injection_id = None
     injection = None
     inj_txt = ''
-    if ds.Modality == 'PT' or ds.Modality == 'NM':
+    if ds.Modality != 'CT': ## FIXME -> not really. 
         inj_txt = ' (no injection found)'
         injection = guess_injection_from_dicom(db, ds, patient)
         if injection != None:
@@ -225,6 +243,7 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
         'patient_id': patient_id,
         'injection_id': injection_id,
         'series_uid': ds.SeriesInstanceUID,
+        'sop_uid': ds.data_element("SOPInstanceUID").value,
         'study_uid':  ds.StudyInstanceUID,
         'frame_of_reference_uid':  frame_of_reference_uid,
         'modality': modality,
@@ -251,7 +270,7 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
         if df is not None:
             print('Warning, a file with same sop_uid already exist, ignoring {}'.format(f))
             continue
-        df, fi = create_dicom_file_info(db, sid, folder, f, ds)
+        df, fi = create_dicom_file_info(db, modality, sid, folder, f, ds)
         if df is not None:
             dicom_file_info.append(df)
             file_info.append(fi)
@@ -277,10 +296,12 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
         copyfile(src, dst)
 
     # final verbose
-    print('A new DicomSerie have been inserted ({} {} {}), with {} files {}'.
+    print('A new DicomSerie have been inserted ({} {} {} {} {}), with {} file(s) {}'.
           format(patient['name'],
+                 dicom_serie['id'],
                  dicom_serie['modality'],
                  dicom_serie['acquisition_date'],
+                 dicom_serie['dataset_name'],
                  len(dicom_file_info), inj_txt))
 
     return dicom_serie['id']
@@ -335,12 +356,16 @@ def guess_injection_from_dicom(db, ds, patient):
 
 
 # -----------------------------------------------------------------------------
-def create_dicom_file_info(db, sid, folder, f, ds):
+def create_dicom_file_info(db, modality, sid, folder, f, ds):
     '''
     Create dico with DicomFile and File information to be inserted
     '''
 
-    dicom_serie = db['DicomSerie'].find_one(series_uid=sid)
+    if modality == 'CT':
+        dicom_serie = db['DicomSerie'].find_one(series_uid=sid)
+    else:
+        dicom_serie = db['DicomSerie'].find_one(sop_uid=sid)
+
     dicom_file_info = {
         'dicom_serie_id': dicom_serie['id'],
         'sop_uid': ds[0x0008, 0x0018].value, # SOPInstanceUID

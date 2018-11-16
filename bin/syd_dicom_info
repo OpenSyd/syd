@@ -9,11 +9,28 @@ import os
 # -----------------------------------------------------------------------------
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command(context_settings=CONTEXT_SETTINGS)
-@click.argument('filename')
-def syd_dicom_info(filename):
+@click.argument('filename', default='')
+@click.option('--id',
+              help='print dicom tag for the given id')
+@click.option('--db', default='',
+              help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
+def syd_dicom_info(filename, id, db):
     '''
     Print dicom tags/value of the given filename
     '''
+
+    if filename != '' and id != None:
+        syd.fatal('Error, gives either filename or id, not both')
+
+    if filename == '' and id == None:
+        syd.fatal('Error, gives either filename or id')
+
+    if (id):
+        db_filename = syd.get_db_filename(db)
+        db = syd.open_db(db_filename)
+        dicom_serie = db['DicomSerie'].find_one(id=id)
+        files = syd.get_dicom_serie_files(db, dicom_serie)
+        filename = syd.get_file_absolute_filename(db, files[0])
 
     # check if already exist
     if (os.path.isdir(filename)):
