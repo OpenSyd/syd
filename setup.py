@@ -33,5 +33,6 @@ setuptools.setup(
         'bin/syd_dicom_info',
         'bin/syd_insert_dicom',
         'bin/syd_insert_image_from_dicom',
+        'bin/syd_geometrical_mean',
         'bin/syd_faf_calibration']
 )

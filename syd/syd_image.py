@@ -163,3 +163,17 @@ def get_image_filename(db, image):
     filepath = get_file_absolute_filename(db, file_mhd)
     return filepath
 
+# -----------------------------------------------------------------------------
+def geometrical_mean(image):
+    print(image)
+
+    # check 4 slices ANT POST etc
+
+    # remove scatter
+
+    # flip post (?)
+
+    # compute GM
+
+    # avoid NaN 
+

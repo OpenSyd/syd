@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import syd
+import click
+import os
+import SimpleITK as sitk
+
+# -----------------------------------------------------------------------------
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument('id', nargs=-1)
+@click.option('--db', default='',
+              help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
+def syd_geometrical_mean(id, db):
+    '''
+    Compute and insert geometrical mean from ant/post image
+    '''
+
+    # open the db
+    db_filename = syd.get_db_filename(db)
+    db = syd.open_db(db_filename)
+
+    # find all images
+    for i in id:
+        print(i)
+        image = db['Image'].find_one(id=i)
+        print('im', image)
+        filepath = syd.get_image_filename(db, image)
+        print('fp', filepath)
+        image = sitk.ReadImage(filepath)
+        gm = syd.geometrical_mean(image)
+        print('gm', gm)
+        #syd.update_one(db['Image'], gm)
+        #print('gm', gm)
+        print()
+    #print('Cannot find image with id {}'.format(id))
+
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    syd_geometrical_mean()
+
