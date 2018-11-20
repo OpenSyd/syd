@@ -17,6 +17,35 @@ def create_file_table(db):
     md5 TEXT)'
     result = db.query(q)
 
+    # define trigger
+    con = db.engine.connect()
+    cur = con.connection.cursor()
+    #cur.execute("CREATE TRIGGER on_delete AFTER DELETE ON DicomFile BEGIN SELECT dicomfile_on_delete(OLD.file_id); END;")
+    #     SELECT dicomfile_on_delete(OLD.file_id);\
+    cur.execute("CREATE TRIGGER on_file_delete AFTER DELETE ON File BEGIN\
+    SELECT * FROM Info; \
+    SELECT file_on_delete(OLD.folder, OLD.filename);\
+    END;")
+    con.close()
+
+
+# -----------------------------------------------------------------------------
+def file_on_delete(db, folder, filename):
+    f = {}
+    f['folder'] = folder
+    f['filename'] = filename
+    p = get_file_absolute_filename(db, f)
+    print('on delete', p)
+
+
+# -----------------------------------------------------------------------------
+def set_file_triggers(db):
+    con = db.engine.connect()
+    # embed the db
+    def t(folder, filename):
+        file_on_delete(db, folder, filename)
+    con.connection.create_function("file_on_delete", 2, t)
+
 
 # -----------------------------------------------------------------------------
 def get_file_absolute_filename(db, file):

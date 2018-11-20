@@ -42,8 +42,8 @@ def create_dicom_serie_table(db):
     study_name TEXT,\
     dataset_name TEXT,\
     folder TEXT,\
-    FOREIGN KEY(patient_id) REFERENCES Patient(id),\
-    FOREIGN KEY(injection_id) REFERENCES Injection(id)\
+    FOREIGN KEY (patient_id) REFERENCES Patient (id) on delete cascade,\
+    FOREIGN KEY (injection_id) REFERENCES Injection (id) on delete cascade\
     )'
     result = db.query(q)
     dicom_serie_table = db['DicomSerie']
@@ -60,15 +60,37 @@ def create_dicom_file_table(db):
     # create DicomFile table
     q = 'CREATE TABLE DicomFile (\
     id INTEGER PRIMARY KEY NOT NULL,\
-    dicom_serie_id INTEGER NOT NULL,\
     file_id INTEGER NOT NULL UNIQUE,\
+    dicom_serie_id INTEGER NOT NULL,\
     sop_uid INTEGER NOT NULL UNIQUE,\
     instance_number INTEGER NOT NULL,\
-    FOREIGN KEY(dicom_serie_id) REFERENCES DicomSerie(id),\
-    FOREIGN KEY(file_id) REFERENCES File(id)\
+    FOREIGN KEY (file_id) REFERENCES File (id) on delete cascade,\
+    FOREIGN KEY (dicom_serie_id) REFERENCES DicomSerie (id) on delete cascade\
     )'
     result = db.query(q)
 
+    # define trigger
+    con = db.engine.connect()
+    cur = con.connection.cursor()
+    #  SELECT dicomfile_on_delete(OLD.file_id);
+    cur.execute("CREATE TRIGGER on_dicomfile_delete AFTER DELETE ON DicomFile BEGIN\
+    DELETE FROM File WHERE id=OLD.file_id;\
+    END;")
+    con.close()
+
+
+# -----------------------------------------------------------------------------
+def dicomfile_on_delete(x):
+    # NOT USED (keep here for example)
+    print('on delete', x)
+
+
+# -----------------------------------------------------------------------------
+def set_dicom_triggers(db):
+    #con = db.engine.connect()
+    #con.connection.create_function("dicomfile_on_delete", 1, dicomfile_on_delete)
+    # Do nothing (no function needed)
+    pass
 
 # -----------------------------------------------------------------------------
 def insert_dicom(db, folder, patient_id=0):

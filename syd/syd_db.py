@@ -57,9 +57,9 @@ def create_db(filename):
     create_patient_table(db)
     create_radionuclide_table(db)
     create_injection_table(db)
-    create_dicom_serie_table(db)
-    create_dicom_file_table(db)
     create_file_table(db)
+    create_dicom_file_table(db)
+    create_dicom_serie_table(db)
     create_image_table(db)
 
     return db
@@ -97,6 +97,10 @@ def open_db(filename):
     info = db['Info'].find_one(id=1)
     folder = info['image_folder']
     db.absolute_data_folder = os.path.join(os.path.dirname(db.absolute_filename), folder)
+
+    # add triggers
+    set_file_triggers(db)
+    set_dicom_triggers(db)
 
     return db
 
