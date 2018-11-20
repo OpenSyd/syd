@@ -35,8 +35,8 @@ def file_on_delete(db, folder, filename):
     f['folder'] = folder
     f['filename'] = filename
     p = get_file_absolute_filename(db, f)
-    print('on delete', p)
-
+    print('Deleting file', p)
+    os.remove(p)
 
 # -----------------------------------------------------------------------------
 def set_file_triggers(db):
