@@ -84,7 +84,7 @@ def syd_find(table_name, grep, db, print_format, delete, id, vv):
                 filename = '' ## nothing
         if filenames != '':
             print('vv '+filenames)
-            os.system('vv '+filenames)
+            os.system('vv '+filenames) # to be changed by subprocess
 
     # print nb found
     if len(res) == 1:
