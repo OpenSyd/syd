@@ -20,8 +20,6 @@ def create_file_table(db):
     # define trigger
     con = db.engine.connect()
     cur = con.connection.cursor()
-    #cur.execute("CREATE TRIGGER on_delete AFTER DELETE ON DicomFile BEGIN SELECT dicomfile_on_delete(OLD.file_id); END;")
-    #     SELECT dicomfile_on_delete(OLD.file_id);\
     cur.execute("CREATE TRIGGER on_file_delete AFTER DELETE ON File BEGIN\
     SELECT * FROM Info; \
     SELECT file_on_delete(OLD.folder, OLD.filename);\
@@ -37,6 +35,7 @@ def file_on_delete(db, folder, filename):
     p = get_file_absolute_filename(db, f)
     print('Deleting file', p)
     os.remove(p)
+
 
 # -----------------------------------------------------------------------------
 def set_file_triggers(db):
@@ -63,6 +62,7 @@ def new_file():
     Create and return a new file
     '''
     return new_file('not_yet', 'not_yet')
+
 
 # -----------------------------------------------------------------------------
 def new_file(db, folder, filename):
