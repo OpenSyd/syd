@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import syd
+import click
+
+# -----------------------------------------------------------------------------
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument('id', nargs=2)
+@click.option('--tag', default='', multiple=True,
+              help='Add tags')
+@click.option('--db', default='',
+              help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
+def syd_stitch_image(id, tag, db):
+    '''
+    Stitch two images together
+
+    ID : list of the 2 image ids
+    '''
+
+    print('NOT YET IMPLEMENTED')
+    exit()
+
+    # check input
+    ids = syd.parse_piped_input(id)
+    if len(id) != 2:
+        syd.fatal('Please provide exactly 2 image ids.')
+
+    # open the db
+    db_filename = syd.get_db_filename(db)
+    db = syd.open_db(db_filename)
+
+    # get the images
+    images = []
+    im = db['Image'].find(id=ids)
+    for i in im:
+        images.append(i)
+
+    # stitch images
+    image = syd.stitch_image(db, images[0], images[1])
+
+    #if len(tag) != 0:
+    #    syd.add_tags(image, tag)
+    #    syd.update_one(db['Image'], image)
+    #p = syd.get_image_patient(db, im)
+    #f = syd.get_image_filename(db, im)
+    #print('Inserted image {} {} {} {}'
+    #      .format(im['id'], p['name'], im['modality'], f))
+
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    syd_stitch_image()
+
