@@ -4,6 +4,8 @@ import dataset
 import pydicom
 import os
 import SimpleITK as sitk
+import itk
+import numpy as np
 from .syd_db import *
 
 # -----------------------------------------------------------------------------
@@ -27,16 +29,15 @@ def create_image_table(db):
     pixel_unit TEXT,\
     frame_of_reference_uid TEXT,\
     modality TEXT,\
-    FOREIGN KEY(patient_id) REFERENCES Patient(id),\
-    FOREIGN KEY(injection_id) REFERENCES Injection(id),\
+    FOREIGN KEY(patient_id) REFERENCES Patient(id) on delete cascade,\
+    FOREIGN KEY(injection_id) REFERENCES Injection(id) on delete cascade,\
     FOREIGN KEY(dicom_serie_id) REFERENCES DicomSerie(id),\
-    FOREIGN KEY(file_mhd_id) REFERENCES File(id),\
-    FOREIGN KEY(file_raw_id) REFERENCES File(id)\
+    FOREIGN KEY(file_mhd_id) REFERENCES File(id) on delete cascade,\
+    FOREIGN KEY(file_raw_id) REFERENCES File(id) on delete cascade\
     )'
     result = db.query(q)
     image_table = db['Image']
     image_table.create_column('acquisition_date', db.types.datetime)
-    #dicom_serie_table.create_column('reconstruction_date', db.types.datetime)
 
 
 # -----------------------------------------------------------------------------
@@ -50,6 +51,7 @@ def build_image_folder(db, image):
     modality = image['modality']
     folder = build_folder(db, pname, date, modality)
     return folder
+
 
 # -----------------------------------------------------------------------------
 def insert_image_from_dicom(db, dicom_serie):
@@ -69,37 +71,6 @@ def insert_image_from_dicom(db, dicom_serie):
     if modality == 'PT':
         pixel_unit = 'MBq/mL'
 
-    # create Image
-    img = {
-        'patient_id': dicom_serie['patient_id'],
-        'injection_id': dicom_serie['injection_id'],
-        'dicom_serie_id': dicom_serie['id'],
-        #'file_mhd_id': id_mhd,
-        #'file_raw_id': id_raw,
-        #'pixel_type': pixel_type,
-        'pixel_unit': pixel_unit,
-        'frame_of_reference_uid': dicom_serie['frame_of_reference_uid'],
-        'modality': modality,
-        'acquisition_date': dicom_serie['acquisition_date']
-    }
-
-    # insert Image
-    img = syd.insert_one(db['Image'], img)
-
-    # build folder name (pname/date/modality)
-    folder = build_image_folder(db, img)
-
-    # create file mhd/raw
-    file_mhd = syd.new_file(db, folder, 'not_yet')
-    file_raw = syd.new_file(db, folder, 'not_yet')
-
-    # use id in the filename
-    id = img['id']
-    file_mhd['filename'] = str(id)+'_'+modality+'.mhd'
-    file_raw['filename'] = str(id)+'_'+modality+'.raw'
-    syd.update_one(db['File'], file_mhd)
-    syd.update_one(db['File'], file_raw)
-
     # get dicom files
     files = syd.get_dicom_serie_files(db, dicom_serie)
     if len(files) == 0:
@@ -112,47 +83,58 @@ def insert_image_from_dicom(db, dicom_serie):
     suid = dicom_serie['series_uid']
 
     # read dicom image
-    image = None
+    itk_image = None
     if len(files) > 1:
         # sort filenames
         series_file_names = sitk.ImageSeriesReader.GetGDCMSeriesFileNames(folder, suid)
         series_reader = sitk.ImageSeriesReader()
         series_reader.SetFileNames(series_file_names)
-        image = series_reader.Execute()
+        itk_image = series_reader.Execute()
     else:
         filename = get_file_absolute_filename(db, files[0])
-        image = sitk.ReadImage(filename)
+        itk_image = sitk.ReadImage(filename)
 
     # pixel_type (ignored)
-    pixel_type = image.GetPixelIDTypeAsString()
+    #pixel_type = image.GetPixelIDTypeAsString()
 
     # convert: assume only 2 type short for CT and float for everything else
     if modality == 'CT':
         pixel_type = 'signed_short'
-        image = sitk.Cast(sitk.RescaleIntensity(image), sitk.sitkInt16)
+        itk_image = sitk.Cast(sitk.RescaleIntensity(itk_image), sitk.sitkInt16)
     else:
         pixel_type = 'float'
-        image = sitk.Cast(sitk.RescaleIntensity(image), sitk.sitkFloat32)
+        itk_image = sitk.Cast(sitk.RescaleIntensity(itk_image), sitk.sitkFloat32)
 
-    # write file
-    filepath = get_file_absolute_filename(db, file_mhd)
-    sitk.WriteImage(image, filepath)
+    # create Image
+    img = {
+        'patient_id': dicom_serie['patient_id'],
+        'injection_id': dicom_serie['injection_id'],
+        'dicom_serie_id': dicom_serie['id'],
+        'pixel_type': pixel_type,
+        'pixel_unit': pixel_unit,
+        'frame_of_reference_uid': dicom_serie['frame_of_reference_uid'],
+        'modality': modality,
+        'acquisition_date': dicom_serie['acquisition_date']
+    }
 
-    # update img
-    img['file_mhd_id'] = file_mhd['id']
-    img['file_raw_id'] = file_raw['id']
-    img['pixel_type'] = pixel_type
-    syd.update_one(db['Image'], img)
+    # insert the image in the db
+    img = syd.insert_new_image(db, img, itk_image)
+
+    # write the mhd file
+    p = syd.get_image_filename(db, img)
+    sitk.WriteImage(itk_image, p)
 
     return img
+
 
 # -----------------------------------------------------------------------------
 def get_image_patient(db, image):
     '''
-    Retrieve the patient associated with the image FIXME ? change to get(db, element, "Patient")
+    Retrieve the patient associated with the image
     '''
     patient = db['Patient'].find_one(id=image['patient_id'])
     return patient
+
 
 # -----------------------------------------------------------------------------
 def get_image_filename(db, image):
@@ -163,17 +145,61 @@ def get_image_filename(db, image):
     filepath = get_file_absolute_filename(db, file_mhd)
     return filepath
 
+
 # -----------------------------------------------------------------------------
-def geometrical_mean(image):
-    print(image)
+def insert_new_image(db, img, itk_image):
+    '''
+    Create a new image in the database: DO NOT COPY itk_image in the db.
+    Should be performed after:
+               p = syd.get_image_filename(db, img)
+               sitk.WriteImage(itk_image, p)
+               or
+               itk.imwrite(itk_image, p)
+    img : dict
+    itk_image : image itk
+    '''
 
-    # check 4 slices ANT POST etc
+    # set the id to None to force a new image
+    img['id']= None
 
-    # remove scatter
+    # insert Image to get the id
+    img = syd.insert_one(db['Image'], img)
 
-    # flip post (?)
+    # create file mhd/raw
+    folder = build_image_folder(db, img)
+    modality = img['modality']
+    id = img['id']
+    file_mhd = syd.new_file(db, folder, str(id)+'_'+modality+'.mhd')
+    file_raw = syd.new_file(db, folder, str(id)+'_'+modality+'.raw')
 
-    # compute GM
+    # update files in img
+    img['file_mhd_id'] = file_mhd['id']
+    img['file_raw_id'] = file_raw['id']
 
-    # avoid NaN 
+    return img
+
+
+# -----------------------------------------------------------------------------
+def insert_geometrical_mean(db, image, k):
+
+    # read image
+    filepath = syd.get_image_filename(db, image)
+    itk_image = itk.imread(filepath)
+
+    # compute gm
+    itk_gm = syd.itk_geometrical_mean(itk_image, k)
+
+    # create new image
+    output = syd.insert_new_image(db, image, itk_gm)
+
+    # write mhd file
+    p = syd.get_image_filename(db, output)
+    itk.imwrite(itk_image, p)
+
+    # add tag
+    syd.add_tag(output, 'geometrical_mean')
+    syd.update_one(db['Image'], output)
+
+    return output
+
 

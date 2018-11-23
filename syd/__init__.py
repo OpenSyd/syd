@@ -14,3 +14,5 @@ from .syd_file import *
 from .syd_image import *
 from .syd_faf_calibration import *
 from .syd_tag import *
+from .syd_stitch_image import *
+from .syd_itk_geometrical_mean import *

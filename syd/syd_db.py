@@ -227,3 +227,17 @@ def update_one(table, element):
     except:
         s = 'Error while updating {}, id not found ?'.format(element)
         raise_except(s)
+
+
+# -----------------------------------------------------------------------------
+def find_one(table, id):
+    '''
+    Retrieve an element from its id
+    '''
+    elem = table.find_one(id=id)
+    if not elem:
+        s = 'Cannot find '+table.name+' with id '+str(id)
+        raise_except(s)
+    return elem
+
+

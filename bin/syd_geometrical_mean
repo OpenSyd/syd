@@ -4,7 +4,7 @@
 import syd
 import click
 import os
-import SimpleITK as sitk
+import itk
 
 # -----------------------------------------------------------------------------
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -23,18 +23,14 @@ def syd_geometrical_mean(id, db):
 
     # find all images
     for i in id:
-        print(i)
-        image = db['Image'].find_one(id=i)
-        print('im', image)
-        filepath = syd.get_image_filename(db, image)
-        print('fp', filepath)
-        image = sitk.ReadImage(filepath)
-        gm = syd.geometrical_mean(image)
-        print('gm', gm)
-        #syd.update_one(db['Image'], gm)
-        #print('gm', gm)
-        print()
-    #print('Cannot find image with id {}'.format(id))
+        image = syd.find_one(db['Image'], i)
+        output = syd.insert_geometrical_mean(db, image, k=1.1)
+        f = syd.get_image_filename(db, output)
+        p = syd.get_image_patient(db, output)
+        tags = output['tags']
+        print('Inserted image {} {} {} {} {}'
+              .format(output['id'], p['name'], output['modality'], f, tags))
+
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
