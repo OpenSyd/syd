@@ -8,10 +8,8 @@ def stitch_image(db, image1, image2):
 
     print('image1', image1)
     print('image2', image2)
-    filename1 = syd.get_image_filename(db, image1)
-    filename2 = syd.get_image_filename(db, image2)
-    im1 = itk.imread(filename1)
-    im2 = itk.imread(filename2)
+    im1 = syd.read_itk_image(db, image1)
+    im2 = syd.read_itk_image(db, image2)
 
     im = stitch_itk_image(im1, im2)
 

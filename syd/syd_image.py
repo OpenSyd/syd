@@ -90,6 +90,25 @@ def insert_image_from_dicom(db, dicom_serie):
         series_reader = sitk.ImageSeriesReader()
         series_reader.SetFileNames(series_file_names)
         itk_image = series_reader.Execute()
+
+        # TRIAL to replace sitk by itk --> FAIL
+
+        # print('done')
+        # reader = itk.ImageSeriesReader.New()
+        # dicomIO = itk.GDCMImageIO.New()
+        # reader.SetImageIO(dicomIO)
+        # dicomFN = itk.GDCMSeriesFileNames.New()
+        # #dicomFN.SetUseSeriesDetails(True)
+        # dicomFN.SetDirectory(folder)
+        # series_file_names = dicomFN.GetFileNames(suid)
+        # print(len(series_file_names))
+        # reader.SetFileNames(series_file_names)
+        # reader.Update()
+        # itk_image = reader.GetOutput()
+        # print('itk_image', itk_image)
+        # exit(0)
+
+
     else:
         filename = get_file_absolute_filename(db, files[0])
         itk_image = sitk.ReadImage(filename)
@@ -147,6 +166,17 @@ def get_image_filename(db, image):
 
 
 # -----------------------------------------------------------------------------
+def read_itk_image(db, image):
+    '''
+    Retrieve the filename associated with the image and read the itk image
+    '''
+    p = get_image_filename(db, image)
+    itk_image = itk.imread(p)
+
+    return itk_image
+
+
+# -----------------------------------------------------------------------------
 def insert_new_image(db, img, itk_image):
     '''
     Create a new image in the database: DO NOT COPY itk_image in the db.
@@ -193,4 +223,3 @@ def insert_write_new_image(db, image, itk_image, tags=[]):
     itk.imwrite(itk_image, p)
 
     return image
-

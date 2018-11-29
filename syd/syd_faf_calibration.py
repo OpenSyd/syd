@@ -18,9 +18,8 @@ def faf_calibration(db, planar, spect, ct, options):
     # store intermediate images: yes
     # tags intermediate images
 
-    # read all images
-    filepath = syd.get_image_filename(db, planar)
-    itk_planar = itk.imread(filepath)
+    # read images
+    itk_planar = syd.read_itk_image(db, planar)
 
     # Step0: crop vial from planar
     if 'crop_y' in options:

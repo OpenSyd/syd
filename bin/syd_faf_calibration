@@ -14,7 +14,13 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
 def syd_faf_calibration(id_planar, id_spect, db):
     '''
-    FIXME
+    Perform FAF calibration.
+
+    Input: id of planar image
+    Input: id of SPECT image
+
+    auto input: id of CT associated with the SPECT
+
     '''
 
     # open the db
@@ -28,9 +34,6 @@ def syd_faf_calibration(id_planar, id_spect, db):
     if not ct:
         s = 'Error, cannot find ct associated with spect, frame_of_reference_uid '+spect['frame_of_reference_uid']
         raise_except(s)
-    print('planar', planar)
-    print('spect', spect)
-    print('ct', ct)
 
     # go
     options = { 'crop_y':724 } # crop in pixel
