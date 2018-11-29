@@ -17,11 +17,13 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
               help='Print format')
 @click.option('--delete/--no-delete', '-d', default=False,
               help='Delete found elements')
-@click.option('--id/--no-id', '-i', default=False,
+@click.option('--short/--no-short', '-s', default=False,
               help='If true, only display results id (for piped commands)')
+@click.option('--id', '-i', multiple=True,
+              help='Only display elements with given id')
 @click.option('--vv/--no-vv', default=False,
               help='Try to open in VV')
-def syd_find(table_name, grep, db, print_format, delete, id, vv):
+def syd_find(table_name, grep, db, print_format, delete, short, id, vv):
     '''
     FIXME
 
@@ -38,7 +40,11 @@ def syd_find(table_name, grep, db, print_format, delete, id, vv):
         exit(0)
 
     table = db[table_name]
-    elements = table.all()
+
+    if len(id) == 0:
+        elements = table.all()
+    else:
+        elements = table.find(id=id)
     res = []
     if len(grep) == 0:
         res = [e for e in elements]
@@ -56,7 +62,7 @@ def syd_find(table_name, grep, db, print_format, delete, id, vv):
     if len(res) == 0:
         return
 
-    if id:
+    if short:
         s=''
         for e in res:
             s = s+str(e['id'])+' '
