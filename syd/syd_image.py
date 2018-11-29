@@ -95,7 +95,7 @@ def insert_image_from_dicom(db, dicom_serie):
         itk_image = sitk.ReadImage(filename)
 
     # pixel_type (ignored)
-    #pixel_type = image.GetPixelIDTypeAsString()
+    # pixel_type = image.GetPixelIDTypeAsString()
 
     # convert: assume only 2 type short for CT and float for everything else
     if modality == 'CT':
@@ -175,31 +175,22 @@ def insert_new_image(db, img, itk_image):
     # update files in img
     img['file_mhd_id'] = file_mhd['id']
     img['file_raw_id'] = file_raw['id']
+    syd.update_one(db['Image'], img)
 
     return img
 
 
 # -----------------------------------------------------------------------------
-def insert_geometrical_mean(db, image, k):
+def insert_write_new_image(db, image, itk_image, tags=[]):
+    '''
+    Create a new image in the database and WRITE the itk_image
+    '''
 
-    # read image
-    filepath = syd.get_image_filename(db, image)
-    itk_image = itk.imread(filepath)
-
-    # compute gm
-    itk_gm = syd.itk_geometrical_mean(itk_image, k)
-
-    # create new image
-    output = syd.insert_new_image(db, image, itk_gm)
-
-    # write mhd file
-    p = syd.get_image_filename(db, output)
+    if len(tags) != 0:
+        syd.add_tags(image, tags)
+    image = syd.insert_new_image(db, image, itk_image)
+    p = syd.get_image_filename(db, image)
     itk.imwrite(itk_image, p)
 
-    # add tag
-    syd.add_tag(output, 'geometrical_mean')
-    syd.update_one(db['Image'], output)
-
-    return output
-
+    return image
 
