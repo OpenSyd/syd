@@ -12,8 +12,15 @@ from .syd_radionuclide import *
 from .syd_dicom import *
 from .syd_file import *
 from .syd_image import *
+
+# methods, helpers
 from .syd_faf_calibration import *
 from .syd_tag import *
 from .syd_stitch_image import *
+
+# itk algorithms
 from .syd_itk_geometrical_mean import *
 from .syd_itk_crop_planar import *
+from .syd_itk_attenuation_coefficient_factor_image import *
+
+

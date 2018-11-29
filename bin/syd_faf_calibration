@@ -9,17 +9,18 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('id_planar')
 @click.argument('id_spect')
-#@click.argument('id_ct') ## auto
+@click.argument('id_ct')
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
-def syd_faf_calibration(id_planar, id_spect, db):
+@click.option('--save/--no-save', '-s', default=False,
+              help='Save intermediate images in the db')
+def syd_faf_calibration(id_planar, id_spect, id_ct, save, db):
     '''
     Perform FAF calibration.
 
     Input: id of planar image
     Input: id of SPECT image
-
-    auto input: id of CT associated with the SPECT
+    Input: id of CT associated with the SPECT
 
     '''
 
@@ -30,13 +31,11 @@ def syd_faf_calibration(id_planar, id_spect, db):
     # get images
     planar = syd.find_one(db['Image'], id_planar)
     spect = syd.find_one(db['Image'], id_spect)
-    ct = db['Image'].find_one(frame_of_reference_uid=spect['frame_of_reference_uid'])
-    if not ct:
-        s = 'Error, cannot find ct associated with spect, frame_of_reference_uid '+spect['frame_of_reference_uid']
-        raise_except(s)
+    ct = syd.find_one(db['Image'], id_ct)
 
     # go
-    options = { 'crop_y':724 } # crop in pixel
+    options = { 'crop_y':724,
+                'save_intermediate_images':save }
     syd.faf_calibration(db, planar, spect, ct, options)
 
 # -----------------------------------------------------------------------------
