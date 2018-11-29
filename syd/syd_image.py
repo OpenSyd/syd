@@ -119,10 +119,10 @@ def insert_image_from_dicom(db, dicom_serie):
     # convert: assume only 2 type short for CT and float for everything else
     if modality == 'CT':
         pixel_type = 'signed_short'
-        itk_image = sitk.Cast(sitk.RescaleIntensity(itk_image), sitk.sitkInt16)
+        itk_image = sitk.Cast(itk_image, sitk.sitkInt16)
     else:
         pixel_type = 'float'
-        itk_image = sitk.Cast(sitk.RescaleIntensity(itk_image), sitk.sitkFloat32)
+        itk_image = sitk.Cast(itk_image, sitk.sitkFloat32)
 
     # create Image
     img = {
