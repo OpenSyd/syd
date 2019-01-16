@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 
 import itk
@@ -32,7 +33,7 @@ def itk_geometrical_mean(itk_image, k):
     # compute GM
     gm = np.sqrt(ant*post)
 
-    # create the output 2D itk image
+    # get np as itk image
     output = itk.GetImageFromArray(gm)
 
     # output.CopyInformation(itk_image) --> nope because 2D and 3D
@@ -40,6 +41,12 @@ def itk_geometrical_mean(itk_image, k):
     output.GetSpacing()[1] = itk_image.GetSpacing()[1]
     output.GetOrigin()[0] = itk_image.GetOrigin()[0]
     output.GetOrigin()[1] = itk_image.GetOrigin()[1]
+
+    # FIXME
+    # this is needed otherwise: bug in IndexToPointMatrix and
+    # PointToIndexMatrix that are not computed ??
+    itk.imwrite(output, "gm.mhd")
+    output = itk.imread("gm.mhd")
 
     return output
 

@@ -3,6 +3,7 @@
 
 import syd
 import click
+import itk
 
 # -----------------------------------------------------------------------------
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -35,8 +36,25 @@ def syd_faf_calibration(id_planar, id_spect, id_ct, save, db):
 
     # go
     options = { 'crop_y':724,
-                'save_intermediate_images':save }
-    syd.faf_calibration(db, planar, spect, ct, options)
+                'save_intermediate_images':save,
+                'axe':1 }
+    # FIXME syd.faf_calibration(db, planar, spect, ct, options)
+
+    # DEBUG
+    itk_spect = syd.read_itk_image(db, spect)
+    itk_planar = syd.read_itk_image(db, planar)
+    print(syd.get_image_filename(db, planar))
+    itk_planar = syd.itk_crop_planar(itk_planar, options['crop_y'])
+
+    print('gm')
+    itk_gm = syd.itk_geometrical_mean(itk_planar, k=1.1)
+
+    print('project')
+    itk_projected_spect = syd.itk_projection_image(itk_spect, 1)
+
+    print('register')
+    itk_acf, offset = syd.itk_register_planar_images(itk_projected_spect, itk_gm)
+    print('done')
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
