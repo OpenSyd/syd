@@ -202,6 +202,8 @@ def insert_new_image(db, img, itk_image):
     file_mhd = syd.new_file(db, folder, str(id)+'_'+modality+'.mhd')
     file_raw = syd.new_file(db, folder, str(id)+'_'+modality+'.raw')
 
+    # FIXME check and set image_type
+
     # update files in img
     img['file_mhd_id'] = file_mhd['id']
     img['file_raw_id'] = file_raw['id']

@@ -16,11 +16,11 @@ Open a db.
 db = syd.open_db('mydatabase.db')
 ```
 
-Insert elements in a table. The info is a dict.
+Insert elements in a table. The ```patient``` variable is a dict.
 
 ```
-syd.insert(db['Patient'], patients_info)
-syd.insert_one(db['Patient'], patient_info)
+syd.insert(db['Patient'], patients)
+syd.insert_one(db['Patient'], patient)
 ```
 
 Delete elements in a table. The input is id or an array of ids.
@@ -30,11 +30,16 @@ syd.delete(db['Patient'], ids)
 syd.delete_one(db['Patient'], id)
 ```
 
-
 Update element in a table, the input is a dict, with 'id' key. 
 
 ```
 syd.update_one(db['Patient'], patient)
+```
+
+Find one element by id.
+
+```
+syd.find_one(db['Patient'], id)
 ```
 
 # Dicom API
@@ -59,15 +64,14 @@ Convert dicom series into image.
 syd.insert_image_from_dicom(db, dicom_serie)
 ```
 
-Helpers to get linked elements.
+Examples of helpers functions.
 
 ```
 patient = syd.get_image_patient(db, image)
 filename = syd.get_image_filename(db, image)
+itk_image = syd.read_itk_image(db, image)
+new_image = syd.insert_new_image(db, image, itk_image)
+new_image = syd.insert_write_new_image(db, image, itk_image, tags)
 ```
 
-FIXME
-syd.insert_image(db, filename, patient_id)
-syd.update_image(image, dicom_serie)
-what about img size spacing etc ? keep in db ? 
 
