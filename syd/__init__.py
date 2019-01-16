@@ -22,5 +22,5 @@ from .syd_stitch_image import *
 from .syd_itk_geometrical_mean import *
 from .syd_itk_crop_planar import *
 from .syd_itk_attenuation_coefficient_factor_image import *
-
-
+from .syd_itk_projection_image import *
+from .syd_itk_register_planar_images import *
