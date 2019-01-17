@@ -3,6 +3,8 @@
 import dataset
 from .syd_db import *
 
+# FIXME str or array ???
+
 # -----------------------------------------------------------------------------
 def add_tags(element, tags):
     if len(tags) == 0:
@@ -24,3 +26,15 @@ def add_tag(element, tag):
         element['tags'] = element['tags']+" "+tag
     else:
         element['tags'] = tag
+
+
+# -----------------------------------------------------------------------------
+def rm_tag(element, tag):
+    if tag == None or tag =='':
+        return
+
+    # add tag
+    if 'tags' in element:
+        element['tags'] = element['tags'].replace(tag, "")
+    else:
+        return

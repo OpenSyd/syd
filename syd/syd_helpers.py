@@ -74,3 +74,12 @@ def parse_piped_input(l):
             if toknum == NUMBER:
                 l.append(tokval)
     return l
+
+
+# -----------------------------------------------------------------------------
+def printe(element):
+    s = ''
+    for v in element.values():
+        s += str(v)+' '
+    print(s)
+

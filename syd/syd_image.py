@@ -216,6 +216,7 @@ def insert_new_image(db, img, itk_image):
 def insert_write_new_image(db, image, itk_image, tags=[]):
     '''
     Create a new image in the database and WRITE the itk_image
+    (id will be changed)
     '''
 
     if len(tags) != 0:

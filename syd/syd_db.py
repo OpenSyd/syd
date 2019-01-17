@@ -6,6 +6,7 @@ import json
 import os
 import sys
 import datetime
+from box import Box
 
 from .syd_patient import *
 from .syd_injection import *
@@ -209,6 +210,7 @@ def replace_key_with_id(element, key_name, table, table_key_name):
 def print_elements(table_name, print_format, elements):
     '''
     Pretty print some elements
+    FIXME use table_name + print_format to pretty print
     '''
 
     for e in elements:
@@ -230,14 +232,36 @@ def update_one(table, element):
 
 
 # -----------------------------------------------------------------------------
-def find_one(table, id):
+def find_one(table, **kwargs):
     '''
-    Retrieve an element from its id
+    Retrieve one element from query
     '''
-    elem = table.find_one(id=id)
+    elem = table.find_one(**kwargs)
     if not elem:
-        s = 'Cannot find '+table.name+' with id '+str(id)
+        s = 'Cannot find one '+table.name+' with query '+str(kwargs)
         raise_except(s)
-    return elem
+    return Box(elem)
+
+# -----------------------------------------------------------------------------
+def find(table, **kwargs):
+    '''
+    Retrieve elements from query
+    '''
+    elem = table.find(**kwargs)
+    elements = []
+    for e in elem:
+        elements.append(Box(e))
+    return elements
+
+# -----------------------------------------------------------------------------
+def find_all(table):
+    '''
+    Retrieve all elements
+    '''
+    elem = table.all()
+    elements = []
+    for e in elem:
+        elements.append(Box(e))
+    return elements
 
 

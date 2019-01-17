@@ -20,7 +20,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--short/--no-short', '-s', default=False,
               help='If true, only display results id (for piped commands)')
 @click.option('--id', '-i', multiple=True,
-              help='Only display elements with given id')
+              help='Only display elements with given id (maybe multiple)')
 @click.option('--vv/--no-vv', default=False,
               help='Try to open in VV')
 def syd_find(table_name, grep, db, print_format, delete, short, id, vv):
@@ -38,13 +38,17 @@ def syd_find(table_name, grep, db, print_format, delete, short, id, vv):
     if not table_name in db:
         print('Table {} does not exist. Tables: {}'.format(table_name, db.tables))
         exit(0)
-
     table = db[table_name]
 
+    # get elements
     if len(id) == 0:
-        elements = table.all()
+        #elements = table.all()
+        elements = syd.find_all(table)
     else:
-        elements = table.find(id=id)
+        #elements = table.find(id=id)
+        elements = syd.find(table, id=id)
+
+    # grep
     res = []
     if len(grep) == 0:
         res = [e for e in elements]
