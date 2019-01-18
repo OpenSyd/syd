@@ -42,10 +42,8 @@ def syd_find(table_name, grep, db, print_format, delete, short, id, vv):
 
     # get elements
     if len(id) == 0:
-        #elements = table.all()
         elements = syd.find_all(table)
     else:
-        #elements = table.find(id=id)
         elements = syd.find(table, id=id)
 
     # grep
@@ -81,7 +79,8 @@ def syd_find(table_name, grep, db, print_format, delete, short, id, vv):
     print(s)
 
     # print
-    syd.print_elements(table_name, print_format, res)
+    #syd.print_elements(table_name, print_format, res)
+    syd.print_elements(res)
 
     # vv ?
     if vv:

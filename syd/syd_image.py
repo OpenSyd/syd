@@ -46,7 +46,7 @@ def build_image_folder(db, image):
     Create the file folder of an Image
     '''
 
-    pname = db['Patient'].find_one(id=image['patient_id'])['name']
+    pname = syd.find_one(db['Patient'], id=image['patient_id'])['name']
     date = image['acquisition_date'].strftime('%Y-%m-%d')
     modality = image['modality']
     folder = build_folder(db, pname, date, modality)
@@ -151,7 +151,7 @@ def get_image_patient(db, image):
     '''
     Retrieve the patient associated with the image
     '''
-    patient = db['Patient'].find_one(id=image['patient_id'])
+    patient = syd.find_one(db['Patient'], id=image['patient_id'])
     return patient
 
 
@@ -160,7 +160,7 @@ def get_image_filename(db, image):
     '''
     Retrieve the filename associated with the image
     '''
-    file_mhd = db['File'].find_one(id=image['file_mhd_id'])
+    file_mhd = syd.find_one(db['File'], id=image['file_mhd_id'])
     filepath = get_file_absolute_filename(db, file_mhd)
     return filepath
 

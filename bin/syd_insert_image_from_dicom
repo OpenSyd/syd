@@ -29,10 +29,9 @@ def syd_insert_image_from_dicom(dicomseries, tag, db):
     db = syd.open_db(db_filename)
 
     # get the dicom_series
-    dicom_series = db['DicomSerie'].find(id=dicomseries)
+    dicom_series = syd.find(db['DicomSerie'], id=dicomseries)
 
     # look and insert dicom
-    n = 0
     for dicom_serie in dicom_series:
         im = syd.insert_image_from_dicom(db, dicom_serie)
         if len(tag) != 0:
@@ -42,9 +41,8 @@ def syd_insert_image_from_dicom(dicomseries, tag, db):
         f = syd.get_image_filename(db, im)
         print('Inserted image {} {} {} {} from dicom {}'
               .format(im['id'], p['name'], im['modality'], f, dicom_serie['id']))
-        n = n +1
 
-    if n == 0:
+    if len(dicom_series == 0):
         print('No dicom series found with id {}.'.format(dicomseries))
 
 # -----------------------------------------------------------------------------

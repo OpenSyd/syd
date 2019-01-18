@@ -176,7 +176,7 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
 
     # check if this series already exist (only for CT)
     if ds.Modality == 'CT':
-        dicom_serie = db['DicomSerie'].find_one(series_uid=sid)
+        dicom_serie = syd.find_one(db['DicomSerie'], series_uid=sid)
         if dicom_serie is not None:
             print('The Dicom Serie already exists in the db, ignoring {} ({} files)'
                   .format(filenames[0], len(filenames)))
@@ -184,7 +184,7 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
     else:
         # for other image check SOP, assume a single image per DicomSeries
         sid = ds.data_element('SOPInstanceUID').value
-        dicom_serie = db['DicomSerie'].find_one(sop_uid=sid)
+        dicom_serie = syd.find_one(db['DicomSerie'], sop_uid=sid)
         if dicom_serie is not None:
             print('The Dicom Serie (same SOP) already exists in the db, ignoring {} ({} files)'
                   .format(filenames[0], len(filenames)))
@@ -240,7 +240,7 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
     injection_id = None
     injection = None
     inj_txt = ''
-    if ds.Modality != 'CT': ## FIXME -> not really. 
+    if ds.Modality != 'CT': ## FIXME -> not really.
         inj_txt = ' (no injection found)'
         injection = guess_injection_from_dicom(db, ds, patient)
         if injection != None:
@@ -248,7 +248,7 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
             inj_txt = '(injection {})'.format(injection['id'])
 
     # build folder
-    pname = db['Patient'].find_one(id=patient_id)['name']
+    pname = syd.find_one(db['Patient'], id=patient_id)['name']
     date = acquisition_date.strftime('%Y-%m-%d')
     modality = ds.Modality
     folder = build_folder(db, pname, date, modality)
@@ -288,7 +288,7 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
     for f in filenames:
         ds = dicom_datasets[i]
         sop_uid = ds[0x0008, 0x0018].value # SOPInstanceUID
-        df = db['DicomFile'].find_one(sop_uid=sop_uid)
+        df = syd.find_one(db['DicomFile'], sop_uid=sop_uid)
         if df is not None:
             print('Warning, a file with same sop_uid already exist, ignoring {}'.format(f))
             continue
@@ -365,7 +365,7 @@ def guess_injection_from_dicom(db, ds, patient):
     Try to guess the injection
     '''
 
-    injections = db['Injection'].find(patient_id=patient['id'])
+    injections = syd.find(db['Injection'], patient_id=patient['id'])
     i = 0
     injection = None
     for inj in injections:
@@ -384,9 +384,9 @@ def create_dicom_file_info(db, modality, sid, folder, f, ds):
     '''
 
     if modality == 'CT':
-        dicom_serie = db['DicomSerie'].find_one(series_uid=sid)
+        dicom_serie = syd.find_one(db['DicomSerie'], series_uid=sid)
     else:
-        dicom_serie = db['DicomSerie'].find_one(sop_uid=sid)
+        dicom_serie = syd.find_one(db['DicomSerie'], sop_uid=sid)
 
     dicom_file_info = {
         'dicom_serie_id': dicom_serie['id'],
@@ -413,7 +413,7 @@ def get_dicom_serie_files(db, dicom_serie):
     '''
 
     # get all dicom files
-    dicom_files = db['DicomFile'].find(dicom_serie_id=dicom_serie['id'])
+    dicom_files = syd.find(db['DicomFile'], dicom_serie_id=dicom_serie['id'])
 
     # get all associated id of the files
     fids = []
@@ -421,7 +421,8 @@ def get_dicom_serie_files(db, dicom_serie):
         fids.append(df['file_id'])
 
     # find files
-    res = db['File'].find(id=fids)
+    #res = db['File'].find(id=fids)
+    res = syd.find(db['File'], id=fids)
     files = []
     for r in res:
         files.append(r)

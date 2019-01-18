@@ -95,8 +95,8 @@ def open_db(filename):
         db.absolute_filename = os.path.abspath(filename)
 
     # add absolute folder
-    info = db['Info'].find_one(id=1)
-    folder = info['image_folder']
+    info = find_one(db['Info'], id=1)
+    folder = info.image_folder
     db.absolute_data_folder = os.path.join(os.path.dirname(db.absolute_filename), folder)
 
     # add triggers
@@ -165,10 +165,8 @@ def delete(table, ids):
     if len(ids) == 0: return
 
     # Search for element
-    e = table.find(id=ids)
-    l = 0
-    for ee in e: l = l+1
-    if l != len(ids):
+    e = find(table, id=ids)
+    if len(e) != len(ids):
         s = 'Error, some elements with id={} do not exist in table {}'.format(ids, table.name)
         raise_except(s)
 
@@ -207,18 +205,6 @@ def replace_key_with_id(element, key_name, table, table_key_name):
 
 
 # -----------------------------------------------------------------------------
-def print_elements(table_name, print_format, elements):
-    '''
-    Pretty print some elements
-    FIXME use table_name + print_format to pretty print
-    '''
-
-    for e in elements:
-        s = ' '.join(str(x) for x in e.values())
-        print(s)
-
-
-# -----------------------------------------------------------------------------
 def update_one(table, element):
     '''
     Update a single element according to the 'id'
@@ -238,8 +224,7 @@ def find_one(table, **kwargs):
     '''
     elem = table.find_one(**kwargs)
     if not elem:
-        s = 'Cannot find one '+table.name+' with query '+str(kwargs)
-        raise_except(s)
+        return None
     return Box(elem)
 
 # -----------------------------------------------------------------------------

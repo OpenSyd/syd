@@ -77,6 +77,31 @@ def parse_piped_input(l):
 
 
 # -----------------------------------------------------------------------------
+def print_elements(table_name, print_format, elements):
+    '''
+    Pretty print some elements
+    FIXME use table_name + print_format to pretty print
+    FIXME rename to pretty_print
+    '''
+
+    for e in elements:
+        s = ' '.join(str(x) for x in e.values())
+        print(s)
+
+
+# -----------------------------------------------------------------------------
+def print_elements(elements):
+    '''
+    Pretty print some elements
+    FIXME use table_name + print_format to pretty print
+    '''
+
+    for e in elements:
+        s = ' '.join(str(x) for x in e.values())
+        print(s)
+
+
+# -----------------------------------------------------------------------------
 def printe(element):
     s = ''
     for v in element.values():

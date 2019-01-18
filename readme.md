@@ -7,7 +7,7 @@ SYD PY
 Create a new empty DB.
 
 ```
-db = syd.create_db('mydatabase'.db')
+db = syd.create_db('mydatabase.db')
 ```
 
 Open a db.
@@ -36,10 +36,12 @@ Update element in a table, the input is a dict, with 'id' key.
 syd.update_one(db['Patient'], patient)
 ```
 
-Find one element by id.
+Find elements
 
 ```
-syd.find_one(db['Patient'], id)
+element = syd.find_one(db['Patient'], id=12)
+elements = syd.find(db['Patient'], id=[12,14])
+elements = syd.find(db['Patient'], name=['toto', 'titi'])
 ```
 
 # Dicom API

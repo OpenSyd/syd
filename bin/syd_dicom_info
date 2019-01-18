@@ -28,7 +28,7 @@ def syd_dicom_info(filename, id, db):
     if (id):
         db_filename = syd.get_db_filename(db)
         db = syd.open_db(db_filename)
-        dicom_serie = db['DicomSerie'].find_one(id=id)
+        dicom_serie = syd.find_one(db['DicomSerie'], id=id)
         files = syd.get_dicom_serie_files(db, dicom_serie)
         filename = syd.get_file_absolute_filename(db, files[0])
 
