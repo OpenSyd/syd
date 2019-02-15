@@ -2,12 +2,16 @@
 
 import syd
 import itk
+import numpy as np
 
 # -----------------------------------------------------------------------------
 def faf_calibration(db, planar, spect, ct, options):
     '''
     TODO
     '''
+
+    # how to organise ? seperate fct ?
+    # write all only at the end ? 
 
     # options:
     # store intermediate images: yes
@@ -51,7 +55,7 @@ def faf_calibration(db, planar, spect, ct, options):
         syd.add_tag(proj_spect, 'spect')
         syd.add_tag(proj_spect, 'projected')
         proj_spect = syd.insert_write_new_image(db, proj_spect, itk_projected_spect)
-        syd.printe(proj_spect)
+        syd.dump(proj_spect)
 
     # Step: register SPECT and Planar
     if verbose: print('Step: register planar with projected SPECT')
@@ -62,7 +66,7 @@ def faf_calibration(db, planar, spect, ct, options):
         syd.add_tag(gm_reg, 'offset_'+str(offset))
         gm_reg = syd.insert_write_new_image(db, gm_reg, itk_gm_reg)
         print('Registration offset: ', offset)
-        syd.printe(proj_spect)
+        syd.dump(proj_spect)
 
     # Step: compute ACF image (3D) Attenuation Correction Factor
     # flip option ?
@@ -74,10 +78,39 @@ def faf_calibration(db, planar, spect, ct, options):
         acf['pixel_unit'] = "mu"
         acf['pixel_type'] = "float"
         acf = syd.insert_write_new_image(db, acf, itk_acf, ['acf'])
-        print(acf)
+        syd.dump(acf)
+
+    # DEBUG save
+    itk.imwrite(itk_gm_reg, "gm.mhd")
+    itk.imwrite(itk_acf, "acf.mhd")
 
     # Step: compute gm_acf (2D) = GM x ACF
     # sydFAF_ACGM_Image
+    # project acf
+    # flip 
+    # threshold FIXME
+    # exponential 
+    # resample ?
+    # If the attenuation is <0, set it to 0
+
+    print('clamp values >0')
+    data = itk.GetArrayViewFromImage(itk_acf)
+    print('min = ', np.min(data))
+    np.clip(data, 0, None)
+    print('min = ', np.min(data))
+
+    itk_proj_acf = syd.itk_projection_image(itk_acf, options['axe'])
+    if options['flip_acf']:
+        itk_proj_acf = syd.itk_flip_image(itk_proj_acf, 1)
+
+    
+        
+    if save:
+        proj_acf = dict(acf)
+        syd.add_tag(proj_acf, 'projected')
+        proj_acf = syd.insert_write_new_image(db, proj_acf, itk_proj_acf)
+        syd.dump(proj_acf)
+
     if verbose: print('Step: compute ACF x GM (attenuation corrected gm)')
 
 

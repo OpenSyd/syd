@@ -132,7 +132,7 @@ def insert_dicom(db, folder, patient_id=0):
                     s = {'sid':sid, 'f':f, 'ds': ds}
                 else:
                     s = {'sid':sopid, 'f':f, 'ds': ds}
-                dicoms.append(s)
+                dicoms.append(s) ## may be Box(s) to allow dicom.id instead of dicom['id]
             else:
                 tqdm.write('Ignoring {}: modality is {}'.format(f,modality))
         except:

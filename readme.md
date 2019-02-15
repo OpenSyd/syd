@@ -36,12 +36,17 @@ Update element in a table, the input is a dict, with 'id' key.
 syd.update_one(db['Patient'], patient)
 ```
 
-Find elements
+Find elements. From ```syd.find```, element is a ```Box``` (a kind of
+dictionnary that allow dot notation to retrieve the field value, ```elem.name```
+instead of ```elem['name']```).
 
 ```
 element = syd.find_one(db['Patient'], id=12)
 elements = syd.find(db['Patient'], id=[12,14])
 elements = syd.find(db['Patient'], name=['toto', 'titi'])
+
+for e in elements:
+     print(e.name)
 ```
 
 # Dicom API

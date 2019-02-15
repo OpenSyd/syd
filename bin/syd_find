@@ -79,8 +79,8 @@ def syd_find(table_name, grep, db, print_format, delete, short, id, vv):
     print(s)
 
     # print
-    #syd.print_elements(table_name, print_format, res)
-    syd.print_elements(res)
+    #syd.dump_elements(table_name, print_format, res)
+    syd.dump_elements(res)
 
     # vv ?
     if vv:
