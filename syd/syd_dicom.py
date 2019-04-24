@@ -9,6 +9,8 @@ from tqdm import tqdm
 from .syd_helpers import *
 from .syd_db import *
 from shutil import copyfile
+from datetime import datetime
+from datetime import timedelta
 
 # -----------------------------------------------------------------------------
 def create_dicom_serie_table(db):
@@ -242,10 +244,11 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
     inj_txt = ''
     if ds.Modality != 'CT': ## FIXME -> not really.
         inj_txt = ' (no injection found)'
-        injection = guess_injection_from_dicom(db, ds, patient)
+        injection = guess_injection_from_dicom(db, ds, acquisition_date, patient)
         if injection != None:
             injection_id = injection['id']
-            inj_txt = '(injection {})'.format(injection['id'])
+            delta = acquisition_date-injection.date
+            inj_txt = '{} hours after injection {}'.format(delta, injection.id)
 
     # build folder
     pname = syd.find_one(db['Patient'], id=patient_id)['name']
@@ -318,7 +321,7 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
         copyfile(src, dst)
 
     # final verbose
-    print('A new DicomSerie have been inserted ({} {} {} {} {}), with {} file(s) {}'.
+    print('Insert DicomSerie ({} {} {} {} {}) {} file(s) {}'.
           format(patient['name'],
                  dicom_serie['id'],
                  dicom_serie['modality'],
@@ -360,7 +363,7 @@ def guess_patient_from_dicom(db, ds):
 
 
 # -----------------------------------------------------------------------------
-def guess_injection_from_dicom(db, ds, patient):
+def guess_injection_from_dicom(db, ds, acquisition_date, patient):
     '''
     Try to guess the injection
     '''
@@ -368,12 +371,17 @@ def guess_injection_from_dicom(db, ds, patient):
     injections = syd.find(db['Injection'], patient_id=patient['id'])
     i = 0
     injection = None
+    max_delta = timedelta(1e8) # default in days
+    zero_delta = timedelta(0)
+    # consider the injection the closer to the acquisition
     for inj in injections:
-        if (i == 0):
+        d_inj = inj.date
+        delta = acquisition_date-d_inj
+        if delta > zero_delta and delta < max_delta:
+            max_delta = delta
             injection = inj
-        else:
-            injection = None
         i = i+1
+        
     return injection
 
 

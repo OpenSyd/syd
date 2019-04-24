@@ -17,7 +17,7 @@ from .syd_helpers import *
 from .syd_image import *
 
 # -----------------------------------------------------------------------------
-def create_db(filename):
+def create_db(filename, overwrite=False):
     '''
     Create a new DB
 
@@ -29,11 +29,13 @@ def create_db(filename):
 
     # FIXME check if already exist
     if (os.path.isdir(filename)):
-        print('Error', filename, ' is a directory')
-        exit
+        raise RuntimeError(filename+' is a directory')
     if (os.path.isfile(filename)):
-        print('Remove',filename)
-        os.remove(filename)
+        if (overwrite):
+            print('Remove',filename)
+            os.remove(filename)
+        else:
+            raise RuntimeError(filename+' already exist')
 
     # create empty db
     db = dataset.connect('sqlite:///'+filename)

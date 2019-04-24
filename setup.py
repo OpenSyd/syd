@@ -24,9 +24,11 @@ setuptools.setup(
         'tqdm',
         'colored',
         'itk',
+	'python-box',
         'SimpleITK'
       ],
     scripts=[
+        'bin/syd_create',
         'bin/syd_info',
         'bin/syd_find',
         'bin/syd_delete',
