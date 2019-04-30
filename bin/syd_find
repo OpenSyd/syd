@@ -13,17 +13,30 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.argument('grep', nargs=-1)
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
-@click.option('--print_format', '-f', default='default',
-              help='Print format')
+
+@click.option('--format_name', '-f', default='default',
+              help='Name of the print format')
+
+@click.option('--format_line', '-p', default='',
+              help='Explicit print format')
+
+@click.option('--print_format_name', 
+              help='Print all the available format names')
+
 @click.option('--delete/--no-delete', '-d', default=False,
               help='Delete found elements')
+
 @click.option('--short/--no-short', '-s', default=False,
               help='If true, only display results id (for piped commands)')
+
 @click.option('--id', '-i', multiple=True,
               help='Only display elements with given id (maybe multiple)')
+
 @click.option('--vv/--no-vv', default=False,
-              help='Try to open in VV')
-def syd_find(table_name, grep, db, print_format, delete, short, id, vv):
+              help='Try to open in VV (only work for Image and DicomSerie)')
+def syd_find(table_name, grep, db,
+             format_name, print_format_name, format_line,
+             delete, short, id, vv):
     '''
     FIXME
 
@@ -39,6 +52,11 @@ def syd_find(table_name, grep, db, print_format, delete, short, id, vv):
         print('Table {} does not exist. Tables: {}'.format(table_name, db.tables))
         exit(0)
     table = db[table_name]
+
+    # print if needed
+    print('pfn', print_format_name)
+    if print_format_name:
+        print('TODO')
 
     # get elements
     if len(id) == 0:
@@ -79,18 +97,30 @@ def syd_find(table_name, grep, db, print_format, delete, short, id, vv):
     print(s)
 
     # print
-    #syd.dump_elements(table_name, print_format, res)
-    syd.dump_elements(res)
+    print('f lin', format_line)
+    if format_line != '':
+        print('ici')
+        s = syd.p(format_line, res)
+    else:
+        s = syd.p_format_name(db, table_name, format_name, res)
+    print(s)
 
     # vv ?
     if vv:
         filenames = ''
         for e in res:
             try:
+                # if element is an Image
                 filename = syd.get_image_filename(db, e)
                 filenames = filenames + ' ' + filename
             except:
-                filename = '' ## nothing
+                try:
+                    # if element is an DicomSerie
+                    filename = syd.get_dicom_serie_files(db, e)
+                    for f in filename:
+                        filenames = filenames + ' ' + syd.get_file_absolute_filename(db, f)
+                except:
+                    filename = '' ## nothing
         if filenames != '':
             print('vv '+filenames)
             os.system('vv '+filenames) # to be changed by subprocess

@@ -15,6 +15,7 @@ from .syd_dicom import *
 from .syd_file import *
 from .syd_helpers import *
 from .syd_image import *
+from .syd_printformat import *
 
 # -----------------------------------------------------------------------------
 def create_db(filename, overwrite=False):
@@ -57,6 +58,7 @@ def create_db(filename, overwrite=False):
     dbi.insert(info)
 
     # create Patient table
+    create_printformat_table(db)
     create_patient_table(db)
     create_radionuclide_table(db)
     create_injection_table(db)
