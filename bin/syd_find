@@ -14,13 +14,13 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
 
-@click.option('--format_name', '-f', default='default',
+@click.option('--line_format_name', '-f', default='default',
               help='Name of the print format')
 
-@click.option('--format_line', '-p', default='',
+@click.option('--line_format', '-p', default='',
               help='Explicit print format')
 
-@click.option('--print_format_name', 
+@click.option('--print_line_format_name', 
               help='Print all the available format names')
 
 @click.option('--delete/--no-delete', '-d', default=False,
@@ -35,7 +35,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--vv/--no-vv', default=False,
               help='Try to open in VV (only work for Image and DicomSerie)')
 def syd_find(table_name, grep, db,
-             format_name, print_format_name, format_line,
+             line_format_name, print_line_format_name, line_format,
              delete, short, id, vv):
     '''
     FIXME
@@ -52,11 +52,6 @@ def syd_find(table_name, grep, db,
         print('Table {} does not exist. Tables: {}'.format(table_name, db.tables))
         exit(0)
     table = db[table_name]
-
-    # print if needed
-    print('pfn', print_format_name)
-    if print_format_name:
-        print('TODO')
 
     # get elements
     if len(id) == 0:
@@ -89,7 +84,7 @@ def syd_find(table_name, grep, db,
         print(s)
         exit()
 
-    # print tables and columns
+    # print tables and columns FIXME 
     s = ''
     for col in db[table_name].table.columns:
         c = str(col)[len(table_name)+1:]
@@ -97,12 +92,9 @@ def syd_find(table_name, grep, db,
     print(s)
 
     # print
-    print('f lin', format_line)
-    if format_line != '':
-        print('ici')
-        s = syd.p(format_line, res)
-    else:
-        s = syd.p_format_name(db, table_name, format_name, res)
+    if line_format == '':
+        line_format = syd.tabular_get_line_format(db, table_name, line_format_name, res[0])
+    s = syd.tabular(db, table_name, line_format, res)
     print(s)
 
     # vv ?

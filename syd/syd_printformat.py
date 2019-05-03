@@ -29,7 +29,16 @@ def create_printformat_table(db):
 
         { 'name': 'default', 'table_name': 'Injection',
           'format': '{id:4} [{patient_id}] {patient.name:<5} {radionuclide.name:5} {activity_in_MBq:8.2f} MBq  {date:%Y-%m-%d %H:%M}\n'
-        }
+        },
+
+        { 'name': 'default', 'table_name': 'DicomSerie',
+          'format': '{id:4} [{patient_id}] {patient.name:<5} {modality} {acquisition_date:%Y-%m-%d %H:%M} {series_description} / {study_description} / {study_name} / {dataset_name} \n'
+        },
+        
+        { 'name': 'file', 'table_name': 'DicomSerie',
+          'format': '{id:4} {filename} \n'
+        },
+        
     ]       
 
     syd.insert(db['PrintFormat'], r)

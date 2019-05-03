@@ -99,11 +99,9 @@ def dump(element):
     print(s)
 
 # -----------------------------------------------------------------------------
-def p_format_name(db, table_name, format_name, elements):
+def tabular_get_line_format(db, table_name, format_name, element):
     '''
-    Pretty dump some elements
-    FIXME use table_name + dump_format to pretty dump
-    FIXME rename to pretty_dump
+    Retrieve the line format from the format name to build a tabluar
     '''
 
     formats = syd.find(db['PrintFormat'], table_name=table_name)
@@ -113,22 +111,27 @@ def p_format_name(db, table_name, format_name, elements):
             df = f.format
 
     if df == None:
-        s = "Cannot find the format '"+format_name+"' in table '"+table_name+"' using 'raw"
+        s = "Cannot find the format '"+format_name+"' in table '"+table_name+"' using 'raw'"
         syd.warning(s)
         format_name = 'raw'
 
     if format_name == 'raw':
-        f = ''
-        for k in elements[0]:
-            f += '{'+str(k)+'} '
-        f += '\n'
-    else:
-        f = df
+        df = ''
+        for k in element:
+            df += '{'+str(k)+'} '
+        df += '\n'
 
-    # FIXME --> subelement
-    # find les {toto.titi} replace -> {titi} + completes elements
-    # need table_name and id
-    # match
+    return df
+
+# -----------------------------------------------------------------------------
+def tabular(db, table_name, line_format, elements):
+    '''
+    Pretty dump some elements with a tabular
+    Modify the elements to include sub-fields
+    '''
+    
+    # find all sub-fields XXX.YYY and add the corresponding fields in the elements list
+    f = line_format
     subelements = re.findall(r'{\w+\.\w+', f)
     tables = []
     fields = []
@@ -140,19 +143,6 @@ def p_format_name(db, table_name, format_name, elements):
         fields.append(field)
         f = f.replace(table+'.'+field, table+'_'+field, 1)
 
-    print(f)
-    print(tables)
-    print(fields)
-
-    # ss = f.split('{')
-    # i = 0
-    # for s in ss:
-    #     print(s)
-    #     ss = re.search(r'\w+\.\w+', s)
-    #     if ss:
-    #         print(ss.group(0))
-    #     i += 1
-
     # add fields in elements
     for e in elements:
         for table, field in zip(tables, fields):
@@ -161,15 +151,25 @@ def p_format_name(db, table_name, format_name, elements):
             eid = e[eid]
             subelem = syd.find_one(db[table.capitalize()], id=eid)
             e[table+"_"+field] = subelem[field]
+
+    subelements = re.findall(r'{filename', f)
+
+    for s in subelements:
+        if (table_name == 'DicomSerie'):
+            for e in elements:
+                files = syd.get_dicom_serie_files(db, e)
+                e['filename'] = syd.get_file_absolute_filename(db, files[0])
+        if (table_name == 'Image'):
+            for e in elements:
+                fn = syd.get_image_filename(db, e)
+                e['filename'] = fn
             
-    return p(f, elements);
+    return tabular_str(f, elements);
 
 # -----------------------------------------------------------------------------
-def p(format_line, elements):
+def tabular_str(format_line, elements):
     '''
-    Pretty dump some elements
-    FIXME use table_name + dump_format to pretty dump
-    FIXME rename to pretty_dump
+    Pretty dump some elements with a tabular
     '''
 
     # check
