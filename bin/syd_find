@@ -84,13 +84,6 @@ def syd_find(table_name, grep, db,
         print(s)
         exit()
 
-    # print tables and columns FIXME 
-    s = ''
-    for col in db[table_name].table.columns:
-        c = str(col)[len(table_name)+1:]
-        s = s+c+' '
-    print(s)
-
     # print
     if line_format == '':
         line_format = syd.tabular_get_line_format(db, table_name, line_format_name, res[0])

@@ -4,6 +4,7 @@
 # general
 from .syd_db import *
 from .syd_helpers import *
+from .syd_tabular import *
 
 # tables
 from .syd_patient import *

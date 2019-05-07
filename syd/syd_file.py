@@ -47,12 +47,12 @@ def set_file_triggers(db):
 
 
 # -----------------------------------------------------------------------------
-def get_file_absolute_filename(db, file):
+def get_file_absolute_filename(db, fi):
     '''
     Return the absolute file path of the given file
     '''
-    p = os.path.join(db.absolute_data_folder, file['folder'])
-    p = os.path.join(p, file['filename'])
+    p = os.path.join(db.absolute_data_folder, fi['folder'])
+    p = os.path.join(p, fi['filename'])
     return p
 
 
