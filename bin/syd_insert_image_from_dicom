@@ -34,6 +34,8 @@ def syd_insert_image_from_dicom(dicomseries, tag, db):
     # look and insert dicom
     for dicom_serie in dicom_series:
         im = syd.insert_image_from_dicom(db, dicom_serie)
+        if im == None:
+            continue
         if len(tag) != 0:
             syd.add_tags(im, tag)
             syd.update_one(db['Image'], im)

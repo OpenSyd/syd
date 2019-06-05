@@ -52,7 +52,7 @@ def create_printformat_table(db):
         },
 
         { 'name': 'default', 'table_name': 'Image',
-          'format': '{id:4} {patient.name:<5} {modality} {acquisition_date:%Y-%m-%d-%H:%M}  {injection.radionuclide.name:5} {injection.date:%Y-%m-%d-%H:%M}  {dicom_serie_id} {pixel_type} {pixel_unit} \n'
+          'format': '{id:4} {patient.name:<5} {modality} {acquisition_date:%Y-%m-%d-%H:%M}  {injection.radionuclide.name:5} {injection.date:%Y-%m-%d-%H:%M}  {dicom_serie_id} {pixel_type} {pixel_unit} {dicom_serie_id} {dicom_serie.series_description} / {dicom_serie.study_description} / {dicom_serie.study_name} / {dicom_serie.dataset_name}\n'
         },
 
     ]       
