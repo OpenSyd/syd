@@ -27,12 +27,14 @@ def dcm_str_to_date(str):
     '''
 
     # remove remaining characters
-    str = str[0:15]
+    st = str[0:15]
 
     # FIXME -> deal with error
-    date = datetime.datetime.strptime(str, '%Y%m%d %H%M%S')
+    try:
+        date = datetime.datetime.strptime(st, '%Y%m%d %H%M%S')
+    except:
+        print('Error converting date', st, str)
     return date
-
 
 # -----------------------------------------------------------------------------
 # color constant

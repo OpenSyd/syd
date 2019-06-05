@@ -226,7 +226,11 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
     except:
         reconstruction_date = ds.InstanceCreationDate
         reconstruction_time = ds.InstanceCreationTime
-    reconstruction_date = dcm_str_to_date(reconstruction_date+' '+reconstruction_time)
+
+    if len(reconstruction_date) < 8 or len(reconstruction_time) < 6:
+        reconstruction_date = acquisition_date
+    else:
+        reconstruction_date = dcm_str_to_date(reconstruction_date+' '+reconstruction_time)
 
     # get tag values that are bytes, not string
     try:
