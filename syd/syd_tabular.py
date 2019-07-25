@@ -70,8 +70,8 @@ def tabular(db, table_name, line_format, elements):
             # consider table.field -> Table and add field to the current element
             eid1 = table1+'_id'
             eid1 = e[eid1]
-            table2_name = table1.replace('_',' ').title().replace(' ','')
-            table1_name = table2.replace('_',' ').title().replace(' ','')
+            table1_name = table1.replace('_',' ').title().replace(' ','')
+            table2_name = table2.replace('_',' ').title().replace(' ','')
             subelem = syd.find_one(db[table1_name], id=eid1)
             if subelem != None:
                 subelem = syd.find_one(db[table2_name], id=subelem[table2+'_id'])

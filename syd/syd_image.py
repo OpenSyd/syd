@@ -117,7 +117,7 @@ def insert_image_from_dicom(db, dicom_serie):
     # pixel_type = image.GetPixelIDTypeAsString()
 
 
-    GetNumberOfComponentsPerPixel
+    #GetNumberOfComponentsPerPixel
 
     # convert: assume only 2 type short for CT and float for everything else
     if modality == 'CT':
