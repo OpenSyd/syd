@@ -34,9 +34,12 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.option('--vv/--no-vv', default=False,
               help='Try to open in VV (only work for Image and DicomSerie)')
+
+@click.option('--update_image_info/--no-update_image_info', default=False,
+              help='DEBUG: update the image info for DicomSerie')
 def syd_find(table_name, grep, db,
              line_format_name, print_line_format_name, line_format,
-             delete, short, id, vv):
+             delete, short, id, vv, update_image_info):
     '''
     FIXME
 
@@ -76,6 +79,12 @@ def syd_find(table_name, grep, db,
 
     if len(res) == 0:
         return
+
+    # DEBUG
+    if update_image_info:
+        for e in res:
+            syd.set_dicom_image_info(db, e);
+            syd.update_one(db['DicomSerie'], e)
 
     if short:
         s=''

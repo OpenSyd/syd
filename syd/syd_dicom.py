@@ -43,6 +43,8 @@ def create_dicom_serie_table(db):
     study_description TEXT,\
     study_name TEXT,\
     dataset_name TEXT,\
+    image_size TEXT,\
+    image_spacing TEXT,\
     folder TEXT,\
     FOREIGN KEY (patient_id) REFERENCES Patient (id) on delete cascade,\
     FOREIGN KEY (injection_id) REFERENCES Injection (id) on delete cascade\
@@ -333,6 +335,8 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
                  dicom_serie['dataset_name'],
                  len(dicom_file_info), inj_txt))
 
+    syd.set_dicom_image_info(db, dicom_serie)
+    syd.update_one(db['DicomSerie'], dicom_serie)
     return dicom_serie['id']
 
 # -----------------------------------------------------------------------------
@@ -439,3 +443,58 @@ def get_dicom_serie_files(db, dicom_serie):
     for r in res:
         files.append(r)
     return files
+
+
+# -----------------------------------------------------------------------------
+def set_dicom_image_info(db, dicom_serie):
+    '''
+    Read image info in the dicom_serie and add the image_size/image_spacing
+    '''
+    
+    files = get_dicom_serie_files(db, dicom_serie)
+    if (len(files) <1):
+        #raise_except('Cannot find file associated with ',dicom_serie)
+        print('Cannot find file associated with ',dicom_serie)
+        return
+    
+    f = files[0]
+    p = syd.get_file_absolute_filename(db, f)
+    ds = pydicom.read_file(p)
+
+    sx = sy = sz = '?'
+    try:
+        sx = ds.Rows
+        sy = ds.Columns
+        sz = ds.NumberOfFrames
+    except:
+       a = 1
+       
+    if (sz != '?'):
+        img_size = '{}x{}x{}'.format(sx,sy,sz)
+    else:
+        if (sx == '?' or sy == '?'):
+            img_size = None
+        else:
+            img_size = '{}x{}'.format(sx,sy)
+
+    spacing_x = spacing_y = spacing_z = '?'
+    try:
+        spacing_x = ds.PixelSpacing[0]
+        spacing_y = ds.PixelSpacing[1]
+        spacing_z = ds.SliceThickness
+    except:
+        a = 1
+
+    if (spacing_z != '?'):
+        img_spacing = '{}x{}x{}'.format(spacing_x,spacing_y,spacing_z)
+    else:
+        if (spacing_x == '?' or spacing_y == '?'):
+            img_spacing = None
+        else:
+            img_spacing = '{}x{}'.format(spacing_x,spacing_y)
+
+    dicom_serie['image_size'] = img_size
+    dicom_serie['image_spacing'] = img_spacing
+
+    #syd.update_one(db['DicomSerie'], d)
+    
