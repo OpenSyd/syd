@@ -86,15 +86,18 @@ def create_dicom_file_table(db):
 # -----------------------------------------------------------------------------
 def dicomfile_on_delete(x):
     # NOT USED (keep here for example)
-    print('on delete', x)
+    print('on delete dicomfile', x)
 
 
 # -----------------------------------------------------------------------------
 def set_dicom_triggers(db):
-    #con = db.engine.connect()
-    #con.connection.create_function("dicomfile_on_delete", 1, dicomfile_on_delete)
+    con = db.engine.connect()
+    # embed the db
+    def t(x):
+        dicomfile_on_delete(db, x)
+    con.connection.create_function("dicomfile_on_delete", 1, t)
     # Do nothing (no function needed)
-    pass
+    # pass
 
 # -----------------------------------------------------------------------------
 def insert_dicom(db, folder, patient_id=0):
@@ -240,9 +243,13 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
     except:
         study_name = ''
     try:
+        print('dataset a ', ds[0x0011, 0x1012].value)
         dataset_name = ds[0x0011, 0x1012].value.decode("utf-8")
+        print('dataset b ', dataset_name)
     except:
         dataset_name = ''
+
+    print('dataset', dataset_name)
 
     # guess injection if NM
     injection_id = None
