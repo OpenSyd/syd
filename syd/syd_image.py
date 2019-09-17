@@ -22,7 +22,7 @@ def create_image_table(db):
     id INTEGER PRIMARY KEY NOT NULL,\
     patient_id INTEGER NOT NULL,\
     injection_id INTEGER,\
-    dicom_serie_id INTEGER,\
+    dicom_series_id INTEGER,\
     file_mhd_id INTEGER,\
     file_raw_id INTEGER,\
     pixel_type TEXT,\
@@ -31,7 +31,7 @@ def create_image_table(db):
     modality TEXT,\
     FOREIGN KEY(patient_id) REFERENCES Patient(id) on delete cascade,\
     FOREIGN KEY(injection_id) REFERENCES Injection(id) on delete cascade,\
-    FOREIGN KEY(dicom_serie_id) REFERENCES DicomSerie(id),\
+    FOREIGN KEY(dicom_series_id) REFERENCES DicomSeries(id),\
     FOREIGN KEY(file_mhd_id) REFERENCES File(id) on delete cascade,\
     FOREIGN KEY(file_raw_id) REFERENCES File(id) on delete cascade\
     )'

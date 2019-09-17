@@ -96,6 +96,7 @@ def tabular(db, table_name, line_format, elements):
         for table, field in zip(tables, fields):
             # consider table.field -> Table and add field to the current element
             eid = table+'_id'
+            print(table, field, eid, e)
             eid = e[eid]
             table_name = table.replace('_',' ').title().replace(' ','')
             subelem = syd.find_one(db[table_name], id=eid)
@@ -105,7 +106,7 @@ def tabular(db, table_name, line_format, elements):
     subelements = re.findall(r'{absolute_filename', f)
 
     for s in subelements:
-        if (table_name == 'DicomSerie'):
+        if (table_name == 'DicomSeries'):
             for e in elements:
                 files = syd.get_dicom_serie_files(db, e)
                 e['absolute_filename'] = syd.get_file_absolute_filename(db, files[0])

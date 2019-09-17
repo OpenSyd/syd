@@ -3,6 +3,7 @@
 
 import syd
 import click
+import os
 
 # -----------------------------------------------------------------------------
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -10,11 +11,14 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.argument('folder')
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
-@click.option('--patient/-p', default='0',
+@click.option('--patient', '-p', default=-1,
               help='associate *all* found dicom with this patient id')
 def syd_insert_dicom(folder, db, patient):
     '''
-    FIXME
+    syd_insert_dicom
+
+    FOLDER : folder to look for dicom or filename
+    
     '''
 
     # open the db
@@ -22,7 +26,12 @@ def syd_insert_dicom(folder, db, patient):
     db = syd.open_db(db_filename)
 
     # look and insert dicom
-    syd.insert_dicom(db, folder, patient)
+    #syd.insert_dicom(db, folder, patient)
+
+    if (os.path.isdir(folder)):    
+        syd.insert_dicom_from_folder(db, folder, patient)
+    else:
+        syd.insert_dicom_from_file(db, folder, patient)
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':

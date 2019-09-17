@@ -24,7 +24,7 @@ def syd_info(db):
 
     # print tables and columns
     for table_name in db.tables:
-        s = table_name+' '+str(len(db[table_name]))+' :'
+        s = table_name+' '+str(len(db[table_name]))+' '
         for col in db[table_name].table.columns:
             c = str(col)[len(table_name)+1:]
             s = s+' '+c

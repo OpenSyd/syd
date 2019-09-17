@@ -63,8 +63,9 @@ def create_db(filename, overwrite=False):
     create_radionuclide_table(db)
     create_injection_table(db)
     create_file_table(db)
+    create_dicom_study_table(db)
+    create_dicom_series_table(db)
     create_dicom_file_table(db)
-    create_dicom_serie_table(db)
     create_image_table(db)
 
     return db
@@ -132,6 +133,11 @@ def insert(table, elements):
     Bulk insert all elements in the table.
     Elements are given as vector of dictionary
     '''
+
+    if not isinstance(elements, list):
+        s = "Error, elements is not an array. Maybe use 'syd.insert_one'"
+        raise_except(s)
+    
     try:
         with table.db as tx:
             for p in elements:

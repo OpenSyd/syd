@@ -2,8 +2,9 @@
 
 import dataset
 import pydicom
+import numpy as np
 import os
-import pathlib
+from pathlib import Path
 from collections import defaultdict
 from tqdm import tqdm
 from .syd_helpers import *
@@ -11,46 +12,51 @@ from .syd_db import *
 from shutil import copyfile
 from datetime import datetime
 from datetime import timedelta
+from difflib import SequenceMatcher
+
+def similar(a, b):
+    return SequenceMatcher(None, a, b).ratio()
 
 # -----------------------------------------------------------------------------
-def create_dicom_serie_table(db):
+def create_dicom_study_table(db):
     '''
-    Create the DicomSerie table
+    Create the DicomStudy table
     '''
 
-    # other fields ?
-    # manufacturer manufacturer_model_name software_version
-    # pixel_scale pixel_offset window_center window_width radionuclide_name
-    # counts_accumulated actual_frame_duration_in_msec
-    # number_of_frames_in_rotation number_of_rotations table_traverse_in_mm
-    # table_height_in_mm rotation_angle real_world_value_slope
-    # real_world_value_intercept
-
-    # WARNING series_uid is not unique ! Thw DicomSerie may be different with
-    # the same DicomSerie
-
-    # create DicomSerie table
-    q = 'CREATE TABLE DicomSerie (\
+    q = 'CREATE TABLE DicomStudy (\
     id INTEGER PRIMARY KEY NOT NULL,\
     patient_id INTEGER,\
-    injection_id INTEGER,\
-    series_uid INTEGER NOT NULL,\
-    sop_uid INTEGER NOT NULL UNIQUE,\
-    study_uid INTEGER NOT NULL,\
-    frame_of_reference_uid INTEGER,\
-    modality TEXT,\
-    series_description TEXT,\
+    study_uid TEXT NOT NULL,\
     study_description TEXT,\
     study_name TEXT,\
+    FOREIGN KEY (patient_id) REFERENCES Patient (id) on delete cascade\
+    )'
+    result = db.query(q)
+
+
+# -----------------------------------------------------------------------------
+def create_dicom_series_table(db):
+    '''
+    Create the DicomSeries table
+    '''
+
+    q = 'CREATE TABLE DicomSeries (\
+    id INTEGER PRIMARY KEY NOT NULL,\
+    dicom_study_id INTEGER NOT NULL,\
+    injection_id INTEGER,\
+    series_uid INTEGER NOT NULL,\
+    series_description TEXT,\
+    modality TEXT,\
+    frame_of_reference_uid INTEGER,\
     dataset_name TEXT,\
     image_size TEXT,\
     image_spacing TEXT,\
     folder TEXT,\
-    FOREIGN KEY (patient_id) REFERENCES Patient (id) on delete cascade,\
+    FOREIGN KEY (dicom_study_id) REFERENCES DicomStudy (id) on delete cascade,\
     FOREIGN KEY (injection_id) REFERENCES Injection (id) on delete cascade\
     )'
     result = db.query(q)
-    dicom_serie_table = db['DicomSerie']
+    dicom_serie_table = db['DicomSeries']
     dicom_serie_table.create_column('acquisition_date', db.types.datetime)
     dicom_serie_table.create_column('reconstruction_date', db.types.datetime)
 
@@ -65,11 +71,11 @@ def create_dicom_file_table(db):
     q = 'CREATE TABLE DicomFile (\
     id INTEGER PRIMARY KEY NOT NULL,\
     file_id INTEGER NOT NULL UNIQUE,\
-    dicom_serie_id INTEGER NOT NULL,\
+    dicom_series_id INTEGER NOT NULL,\
     sop_uid INTEGER NOT NULL UNIQUE,\
-    instance_number INTEGER NOT NULL,\
+    instance_number INTEGER,\
     FOREIGN KEY (file_id) REFERENCES File (id) on delete cascade,\
-    FOREIGN KEY (dicom_serie_id) REFERENCES DicomSerie (id) on delete cascade\
+    FOREIGN KEY (dicom_series_id) REFERENCES DicomSeries (id) on delete cascade\
     )'
     result = db.query(q)
 
@@ -100,129 +106,117 @@ def set_dicom_triggers(db):
     # pass
 
 # -----------------------------------------------------------------------------
-def insert_dicom(db, folder, patient_id=0):
+def insert_dicom_from_folder(db, folder, patient_id):
     '''
-    Search for Dicom Series in the folder and insert in the database.
-
-    Options FIXME
-    - for each NM serie -> associate injection/patient
-    - what about several series ?
-    - recursive
-    - option: copy or link files in the db image folder
-    - what kind of tags stored in the tables ?? how stored ?
+    New insert dicom from folder
     '''
 
     # get all the files (recursively)
-    files = list(pathlib.Path(folder).rglob("*"))
+    files = list(Path(folder).rglob("*"))
     print('Found {} files/folders in {}'.format(len(files), folder))
 
-    # read all dicom dataset to get the SeriesInstanceUID
-    # store the sid, the filename and the dicom dataset
-    dicoms = []
     pbar = tqdm(total=len(files), leave=False)
+    dicoms = []
     for f in files:
         f = str(f)
         # ignore if this is a folder
         if (os.path.isdir(f)): continue
-        # try to read the dicom file
-        try:
-            ds = pydicom.read_file(f)
-            try:
-                sid = ds.data_element("SeriesInstanceUID").value
-                sopid = ds.data_element("SOPInstanceUID").value
-                modality = ds.Modality
-            except:
-                tqdm.write('Ignoring {}: cannot find SeriesInstanceUID'.format(f))
-            # ignore unmanaged modality
-            if (modality == 'CT' or modality == 'PT' or modality == 'NM' or modality == 'OT'):
-                if (modality == 'CT'):
-                    s = {'sid':sid, 'f':f, 'ds': ds}
-                else:
-                    s = {'sid':sopid, 'f':f, 'ds': ds}
-                dicoms.append(s) ## may be Box(s) to allow dicom.id instead of dicom['id]
-            else:
-                tqdm.write('Ignoring {}: modality is {}'.format(f,modality))
-        except:
-            tqdm.write('Ignoring {}: (not a dicom)'.format(f))
+        # read the dicom file
+        d = insert_dicom_from_file(db, f, patient_id)
+        dicoms.append(d)
         # update progress bar
         pbar.update(1)
     pbar.close()
+    print('Insertion of {} DICOM files.'.format(len(dicoms)))
 
-    # find all series, group corresponding files and dataset
-    series = defaultdict(list)
-    for d in dicoms:
-        sid = d['sid']
-        #sop = d['sopid']
-        if sid in series:
-            a = series[sid]
-            a['f'].append(d['f'])
-            a['ds'].append(d['ds'])
-        else:
-            series[sid] = { 'f':[d['f']], 'ds':[d['ds']]}
-
-    # create series
-    print('Found {} Dicom Series'.format(len(series)))
-    dicom_series = []
-    for k,v in series.items():
-        ds = insert_dicom_serie(db, v['f'], v['ds'], patient_id)
-        dicom_series.append(ds)
-
-    return dicom_series
 
 # -----------------------------------------------------------------------------
-def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
+def insert_dicom_from_file(db, filename, patient_id):
     '''
-    Insert one dicom serie, with all associated files
-    If patient_id is 0, try to guess
-    Try to associate one injection, only if only one exist for this patient.
+    Insert or update a dicom from a filename
     '''
 
-    # consider only the first dataset
-    ds = dicom_datasets[0]
-    sid = ds.data_element('SeriesInstanceUID').value
+    # read the file
+    try:
+        ds = pydicom.read_file(filename)
+    except:
+        tqdm.write('Ignoring {}: not a dicom'.format(Path(filename).name))
+        return {}
 
-    # check if this series already exist (only for CT)
-    if ds.Modality == 'CT':
-        dicom_serie = syd.find_one(db['DicomSerie'], series_uid=sid)
-        if dicom_serie is not None:
-            print('The Dicom Serie already exists in the db, ignoring {} ({} files)'
-                  .format(filenames[0], len(filenames)))
-            return
-    else:
-        # for other image check SOP, assume a single image per DicomSeries
-        sid = ds.data_element('SOPInstanceUID').value
-        dicom_serie = syd.find_one(db['DicomSerie'], sop_uid=sid)
-        if dicom_serie is not None:
-            print('The Dicom Serie (same SOP) already exists in the db, ignoring {} ({} files)'
-                  .format(filenames[0], len(filenames)))
-            return
+    # read study, series, instance
+    try:
+        sop_uid = ds.data_element("SOPInstanceUID").value
+    except:
+        tqdm.write('Ignoring {}: cannot read UIDs'.format(filename))
+        return {}
 
-    # get patient_id
-    patient = None
-    if (patient_id == 0):
-        patient = guess_patient_from_dicom(db, ds)
-        if (patient != None):
-            patient_id = patient['id']
+    # check if this file already exist in the db
+    dicom_file = syd.find_one(db['DicomFile'], sop_uid=sop_uid)
 
-    # guess fail ?
-    if (patient_id == 0):
-        print('The dicom serie {} is ignored'.format(sid))
-        print('In file: {}'.format(filenames[0]))
-        return
+    if dicom_file is not None:
+        tqdm.write('Ignoring {}: Dicom SOP Instance already in the db'.format(Path(filename).name))
+        return {}
 
-    # check if patient exist
-    if patient is None:
-        print('Error, cannor find the patient with id {}'.format(patient_id))
-        print('The dicom serie {} is ignored'.format(sid))
-        return
+    # retrieve series or create if not exist
+    series_uid = ds.data_element("SeriesInstanceUID").value
+    dicom_series = syd.find_one(db['DicomSeries'], series_uid=series_uid)
+    if dicom_series is None:
+        dicom_series = insert_dicom_series_from_dataset(db, ds, patient_id)
+        dicom_series = syd.insert_one(db['DicomSeries'], dicom_series)
+        tqdm.write('Insert new DicomSeries {}'.format(dicom_series))
 
-    # get date
+    # update dicom file
+    dicom_file = insert_dicom_file_dataset(db, filename, dicom_series, ds)
+    tqdm.write('Insert DicomFile {}'.format(dicom_file))
+
+
+# -----------------------------------------------------------------------------
+def insert_dicom_series_from_dataset(db, ds, patient_id):
+
+    # retrieve study or create if not exist
+    study_uid = ds.data_element("StudyInstanceUID").value
+    dicom_study = syd.find_one(db['DicomStudy'], study_uid=study_uid)
+    if dicom_study is None:
+        dicom_study = insert_dicom_study_from_dataset(db, ds, patient_id)
+        dicom_study = syd.insert_one(db['DicomStudy'], dicom_study)
+        tqdm.write('Insert new DicomStudy {}'.format(dicom_study))
+
+    # id INTEGER PRIMARY KEY NOT NULL,\
+    # injection_id INTEGER,\
+    # image_size TEXT,\
+    # image_spacing TEXT,\
+    # folder TEXT,\
+    # dicom_serie_table.create_column('acquisition_date', db.types.datetime)
+    # dicom_serie_table.create_column('reconstruction_date', db.types.datetime)
+
+    dicom_series = Box()
+    dicom_series.dicom_study_id = dicom_study.id
+    dicom_series.series_uid = ds.data_element("SeriesInstanceUID").value
+    try:
+        dicom_series.series_description = ds.data_element("SeriesDescription").value
+    except:
+        dicom_series.series_description = ''
+    try:
+        dicom_series.modality = ds.Modality
+    except:
+        dicom_series.modality = ''
+    try:
+        dicom_series.frame_of_reference_uid = ds.FrameOfReferenceUID
+    except:
+        dicom_series.frame_of_reference_uid = ''
+    try:
+        dicom_series.dataset_name = dataset_name = ds[0x0011, 0x1012].value.decode("utf-8")
+    except:
+        dicom_series.dataset_name = ''
+
+    # dates
     try:
         acquisition_date = ds.AcquisitionDate
         acquisition_time = ds.AcquisitionTime
     except:
         acquisition_date = ds.InstanceCreationDate
         acquisition_time = ds.InstanceCreationTime
+
     acquisition_date = dcm_str_to_date(acquisition_date+' '+acquisition_time)
 
     try:
@@ -236,237 +230,157 @@ def insert_dicom_serie(db, filenames, dicom_datasets, patient_id):
         reconstruction_date = acquisition_date
     else:
         reconstruction_date = dcm_str_to_date(reconstruction_date+' '+reconstruction_time)
+    dicom_series.acquisition_date = acquisition_date
+    dicom_series.reconstruction_date = reconstruction_date
 
-    # get tag values that are bytes, not string
-    try:
-        study_name = ds[0x0009,0x1010].value.decode("utf-8")
-    except:
-        study_name = ''
-    try:
-        print('dataset a ', ds[0x0011, 0x1012].value)
-        dataset_name = ds[0x0011, 0x1012].value.decode("utf-8")
-        print('dataset b ', dataset_name)
-    except:
-        dataset_name = ''
+    # try yo guess injection (later)
+    guess_injection_from_dicom_dataset(db, ds) # FIXME do it later
+    #dicom_series.injection_id = xxxx
 
-    print('dataset', dataset_name)
+    # folder
+    dicom_series.folder = build_dicom_series_folder(db, dicom_series)
+    
+    # image size
+    image_size, image_spacing = get_dicom_image_info_from_dataset(ds)
+    dicom_series.image_size = image_size
+    dicom_series.image_spacing = image_spacing
+    
+    return dicom_series
 
-    # guess injection if NM
-    injection_id = None
-    injection = None
-    inj_txt = ''
-    if ds.Modality != 'CT': ## FIXME -> not really.
-        inj_txt = ' (no injection found)'
-        injection = guess_injection_from_dicom(db, ds, acquisition_date, patient)
-        if injection != None:
-            injection_id = injection['id']
-            delta = acquisition_date-injection.date
-            inj_txt = '{} hours after injection {}'.format(delta, injection.id)
-
-    # build folder
-    pname = syd.find_one(db['Patient'], id=patient_id)['name']
-    date = acquisition_date.strftime('%Y-%m-%d')
-    modality = ds.Modality
-    folder = build_folder(db, pname, date, modality)
+# -----------------------------------------------------------------------------
+def build_dicom_series_folder(db, dicom_series):
+    dicom_study = syd.find_one(db['DicomStudy'], id=dicom_series.dicom_study_id)
+    patient_id = dicom_study.patient_id
+    pname = syd.find_one(db['Patient'], id=patient_id).name
+    date = dicom_series.acquisition_date.strftime('%Y-%m-%d')
+    modality = dicom_series.modality
+    folder = os.path.join(pname, date)
+    folder = os.path.join(folder, modality)
     folder = os.path.join(folder, 'dicom')
+    return folder
 
-    # get values that may be none
+
+# -----------------------------------------------------------------------------
+def insert_dicom_study_from_dataset(db, ds, patient_id):
+
+    # retrieve patient or create if not exist
+    patient = get_or_create_patient_dataset(db, ds, patient_id)
+
+    dicom_study = Box()
+    dicom_study.study_uid = str(ds.data_element("StudyInstanceUID").value)
+
     try:
-        frame_of_reference_uid = ds.FrameOfReferenceUID
+        dicom_study.study_description = ds.data_element("StudyDescription").value
     except:
-        frame_of_reference_uid = None
+        dicom_study.study_description = ''
+    try:
+        dicom_study.study_name = ds[0x0009,0x1010].value.decode("utf-8")
+    except:
+        dicom_study.study_name = ''
 
-    # build info
-    info = {
-        'patient_id': patient_id,
-        'injection_id': injection_id,
-        'series_uid': ds.SeriesInstanceUID,
-        'sop_uid': ds.data_element("SOPInstanceUID").value,
-        'study_uid':  ds.StudyInstanceUID,
-        'frame_of_reference_uid':  frame_of_reference_uid,
-        'modality': modality,
-        'series_description': ds.SeriesDescription,
-        'study_description': ds.StudyDescription,
-        'study_name': study_name,
-        'dataset_name': dataset_name,
-        'acquisition_date': acquisition_date,
-        'reconstruction_date': reconstruction_date,
-        'folder': folder
-    }
+    dicom_study.patient_id = patient.id
 
-    # insert the dicom serie
-    dicom_serie = syd.insert_one(db['DicomSerie'], info)
-
-    # create DicomFile and File
-    dicom_file_info = []
-    file_info = []
-    i=0
-    for f in filenames:
-        ds = dicom_datasets[i]
-        sop_uid = ds[0x0008, 0x0018].value # SOPInstanceUID
-        df = syd.find_one(db['DicomFile'], sop_uid=sop_uid)
-        if df is not None:
-            print('Warning, a file with same sop_uid already exist, ignoring {}'.format(f))
-            continue
-        df, fi = create_dicom_file_info(db, modality, sid, folder, f, ds)
-        if df is not None:
-            dicom_file_info.append(df)
-            file_info.append(fi)
-        i = i+1
-
-    # insert file
-    files = syd.insert(db['File'], file_info)
-
-    # change file_id in dicom_file
-    i=0
-    for d,f in zip(dicom_file_info, files):
-        d['file_id'] = f['id']
-    syd.insert(db['DicomFile'], dicom_file_info)
-
-    # copy file
-    for df, f in zip(file_info, filenames):
-        src = f
-        dst_folder = os.path.join(db.absolute_data_folder, df['folder'])
-        dst = os.path.join(dst_folder, df['filename'])
-        if not os.path.exists(dst_folder):
-            os.makedirs(dst_folder)
-        #if os.path.exists(dst): FIXME overwrite ?
-        copyfile(src, dst)
-
-    # final verbose
-    print('Insert DicomSerie ({} {} {} {} {}) {} file(s) {}'.
-          format(patient['name'],
-                 dicom_serie['id'],
-                 dicom_serie['modality'],
-                 dicom_serie['acquisition_date'],
-                 dicom_serie['dataset_name'],
-                 len(dicom_file_info), inj_txt))
-
-    syd.set_dicom_image_info(db, dicom_serie)
-    syd.update_one(db['DicomSerie'], dicom_serie)
-    return dicom_serie['id']
+    return dicom_study
 
 # -----------------------------------------------------------------------------
-def guess_patient_from_dicom(db, ds):
-    '''
-    Try to guess the patient if from the dicom dataset using dicom_patient_id
-    '''
+def get_or_create_patient_dataset(db, ds, patient_id):
 
-    pid = ds.data_element('PatientID').value
-    patients = db['Patient'].all()
-
-    # look for dicom_id FIXME -> to change with a ad-hoc fct for vector data
-    found = []
-    for p in patients:
-        ids = p['dicom_id']
-        ids = ids.split(',')
-        for tid in ids:
-            if (tid == pid):
-                found.append(p)
-
-    # ----> FIXME to change with something like ?
-    # table.find(db['Patient'].table.columns.dicom_id like tid)
-
-    if (len(found) == 0):
-        print('Cannot guess patient with PatientID {}'.format(pid))
-        return None
-    if (len(found) > 1):
-        print('Several patients found with dicomID = {}, bug !?'.format(pid))
-        return None
-
-    return found[0]
-
-
-# -----------------------------------------------------------------------------
-def guess_injection_from_dicom(db, ds, acquisition_date, patient):
-    '''
-    Try to guess the injection
-    '''
-
-    injections = syd.find(db['Injection'], patient_id=patient['id'])
-    i = 0
-    injection = None
-    max_delta = timedelta(1e8) # default in days
-    zero_delta = timedelta(0)
-    # consider the injection the closer to the acquisition
-    for inj in injections:
-        d_inj = inj.date
-        delta = acquisition_date-d_inj
-        if delta > zero_delta and delta < max_delta:
-            max_delta = delta
-            injection = inj
-        i = i+1
-        
-    return injection
-
-
-# -----------------------------------------------------------------------------
-def create_dicom_file_info(db, modality, sid, folder, f, ds):
-    '''
-    Create dico with DicomFile and File information to be inserted
-    '''
-
-    if modality == 'CT':
-        dicom_serie = syd.find_one(db['DicomSerie'], series_uid=sid)
+    # retrieve patient or create if not exist
+    if patient_id == -1:
+        patient_dicom_id = ds.data_element("PatientID").value
+        patient = syd.find_one(db['Patient'], dicom_id=patient_dicom_id)
+        if patient is None:
+            patient = Box()
+            patient.name = str(ds.data_element("PatientName").value)
+            patient.dicom_id = patient_dicom_id
+            patient.sex = ds.data_element("PatientSex").value
+            patient.num = 0
+            # FIXME --> to complete
+            patient = syd.insert_one(db['Patient'], patient)
+            tqdm.write('Insert new Patient {}'.format(patient))
     else:
-        dicom_serie = syd.find_one(db['DicomSerie'], sop_uid=sid)
+        patient = syd.find_one(db['Patient'], id=patient_id)
 
-    dicom_file_info = {
-        'dicom_serie_id': dicom_serie['id'],
-        'sop_uid': ds[0x0008, 0x0018].value, # SOPInstanceUID
-        'instance_number': ds.InstanceNumber
-    }
+    return patient
 
-    # filename = basename
-    filename = os.path.basename(f)
+# -----------------------------------------------------------------------------
+def insert_dicom_file_dataset(db, filename, dicom_series, ds):
 
-    file_info = {
-        'filename': filename,
-        'folder': folder,
-        #'md5': md5 # later
-    }
+    dicom_file = Box()
+    dicom_file.sop_uid = ds.data_element("SOPInstanceUID").value
+    dicom_file.dicom_series_id = dicom_series.id
+    try:
+        dicom_file.instance_number = int(ds.InstanceNumber)
+    except:
+        pass #dicom_file.instance_number = 0
+        
+    # insert file in folder
+    afile = Box()
+    afile.folder = dicom_series.folder
+    afile.filename = filename
+    # afil.md5 = later     
+    afile = syd.insert_one(db['File'], afile)
 
-    return dicom_file_info, file_info
+    # copy the file
+    src = filename
+    dst_folder = os.path.join(db.absolute_data_folder, dicom_series.folder)
+    dst = os.path.join(dst_folder, os.path.basename(filename))
+    if not os.path.exists(dst_folder):
+        os.makedirs(dst_folder)
+    copyfile(src, dst)
+
+    # insert the dicom_file
+    dicom_file.file_id = afile.id
+    syd.insert_one(db['DicomFile'], dicom_file)
+    
+    return dicom_file
 
 
 # -----------------------------------------------------------------------------
-def get_dicom_serie_files(db, dicom_serie):
-    '''
-    Return the list of files associated with the dicom_serie
-    '''
+def guess_injection_from_dicom_dataset(db, ds):
 
-    # get all dicom files
-    dicom_files = syd.find(db['DicomFile'], dicom_serie_id=dicom_serie['id'])
+    # EXAMPLE
+    
+    #(0040, 2017) Filler Order Number / Imaging Servi LO: 'IM00236518'
+    #(0054, 0016)  Radiopharmaceutical Information Sequence   1 item(s) ----
+    #  (0018, 0031) Radiopharmaceutical                 LO: 'Other'
+    #  (0018, 1070) Radiopharmaceutical Route           LO: 'Intravenous route'
+    #  (0018, 1072) Radiopharmaceutical Start Time      TM: '111200'
+    #  (0018, 1074) Radionuclide Total Dose             DS: "98000000"
+    #  (0018, 1075) Radionuclide Half Life              DS: "4062.599854"
+    #  (0018, 1076) Radionuclide Positron Fraction      DS: "0.891"
+    #  (0018, 1078) Radiopharmaceutical Start DateTime  DT: '20180926111208'
+    #  (0054, 0300)  Radionuclide Code Sequence   1 item(s) ----
+    #    (0008, 0100) Code Value                          SH: 'C-131A3'
+    #    (0008, 0102) Coding Scheme Designator            SH: 'SRT'
+    #    (0008, 0104) Code Meaning                        LO: '^68^Galium'
 
-    # get all associated id of the files
-    fids = []
-    for df in dicom_files:
-        fids.append(df['file_id'])
+    all_rad = syd.find(db['Radionuclide'])
+    rad_names = [ n.name for n in all_rad]
+    found_rad = ''
+    rad_date = ''
 
-    # find files
-    #res = db['File'].find(id=fids)
-    res = syd.find(db['File'], id=fids)
-    files = []
-    for r in res:
-        files.append(r)
-    return files
+    try:
+        rad_seq = ds[0x0054,0x0016]           # (0054, 0016) Radiopharmaceutical Information Sequence
+        for rad in rad_seq:
+            r = rad[0x0018, 0x0031]           # (0018, 0031) Radiopharmaceutical
+            code_seq = rad[0x0054,0x0300]     # (0054, 0300) Radionuclide Code Sequence
+            for code in code_seq:
+                c = code[0x0008,0x0104].value # (0008, 0104) Code Meaning
+                s = [similar(c,n) for n in rad_names]
+                s = np.array(s)
+                i= np.argmax(s)
+                found_rad = rad_names[i]
+                rad_date = rad[0x0018,0x1078].value # (0018, 1078) Radiopharmaceutical Start DateTime
+    except:
+          tqdm.write('Cannot find info on radiopharmaceutical')
+          return {}
+        
+    return {}
 
 
 # -----------------------------------------------------------------------------
-def set_dicom_image_info(db, dicom_serie):
-    '''
-    Read image info in the dicom_serie and add the image_size/image_spacing
-    '''
-    
-    files = get_dicom_serie_files(db, dicom_serie)
-    if (len(files) <1):
-        #raise_except('Cannot find file associated with ',dicom_serie)
-        print('Cannot find file associated with ',dicom_serie)
-        return
-    
-    f = files[0]
-    p = syd.get_file_absolute_filename(db, f)
-    ds = pydicom.read_file(p)
+def get_dicom_image_info_from_dataset(ds):
 
     sx = sy = sz = '?'
     try:
@@ -474,8 +388,8 @@ def set_dicom_image_info(db, dicom_serie):
         sy = ds.Columns
         sz = ds.NumberOfFrames
     except:
-       a = 1
-       
+        pass
+
     if (sz != '?'):
         img_size = '{}x{}x{}'.format(sx,sy,sz)
     else:
@@ -490,7 +404,7 @@ def set_dicom_image_info(db, dicom_serie):
         spacing_y = ds.PixelSpacing[1]
         spacing_z = ds.SliceThickness
     except:
-        a = 1
+        pass
 
     if (spacing_z != '?'):
         img_spacing = '{}x{}x{}'.format(spacing_x,spacing_y,spacing_z)
@@ -500,8 +414,6 @@ def set_dicom_image_info(db, dicom_serie):
         else:
             img_spacing = '{}x{}'.format(spacing_x,spacing_y)
 
-    dicom_serie['image_size'] = img_size
-    dicom_serie['image_spacing'] = img_spacing
+    return img_size, img_spacing
 
-    #syd.update_one(db['DicomSerie'], d)
-    
+
