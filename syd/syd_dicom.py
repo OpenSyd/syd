@@ -14,8 +14,48 @@ from datetime import datetime
 from datetime import timedelta
 from difflib import SequenceMatcher
 
-def similar(a, b):
-    return SequenceMatcher(None, a, b).ratio()
+'''
+DICOM Module
+------------
+
+Tables
+------
+- DicomStudy   : patient_id study_uid study_description study_name
+- DicomSeries  : dicom_study_id injection_id series_uid series_description
+                 modality frame_of_reference_uid dataset_name
+                 image_size image_spacing
+                 folder
+- DicomFile    : file_id sop_uid dicom_serie_id instance_number
+
+
+
+Functions
+---------
+- insert_dicom_from_folder
+- insert_dicom_from_file
+- insert_dicom_series_from_dataset(db, ds, patient_id)
+- insert_dicom_study_from_dataset(db, ds, patient_id)
+- insert_dicom_file_dataset(db, filename, dicom_series, ds)
+
+- build_dicom_series_folder(db, dicom_series)
+- get_or_create_patient_dataset(db, ds, patient_id)
+- guess_injection_from_dicom_dataset(db, ds)
+- get_dicom_image_info_from_dataset(ds)
+
+
+
+Principles
+---------
+
+Always ignore if a uid already present in the DB. To update, delete the elements first.
+
+Files are inserted and copied successively, not in batch. Maybe slower.
+
+Patient are created according to Dicom tag 'PatientID'. If is null or
+void, will still create a patient. Alternatively, patient may be
+indicated in the function call.
+
+'''
 
 # -----------------------------------------------------------------------------
 def create_dicom_study_table(db):
@@ -123,7 +163,8 @@ def insert_dicom_from_folder(db, folder, patient_id):
         if (os.path.isdir(f)): continue
         # read the dicom file
         d = insert_dicom_from_file(db, f, patient_id)
-        dicoms.append(d)
+        if d != {}:
+            dicoms.append(d)
         # update progress bar
         pbar.update(1)
     pbar.close()
@@ -315,16 +356,17 @@ def insert_dicom_file_dataset(db, filename, dicom_series, ds):
         pass #dicom_file.instance_number = 0
         
     # insert file in folder
+    base_filename = os.path.basename(filename)
     afile = Box()
     afile.folder = dicom_series.folder
-    afile.filename = filename
+    afile.filename = base_filename
     # afil.md5 = later     
     afile = syd.insert_one(db['File'], afile)
 
     # copy the file
     src = filename
     dst_folder = os.path.join(db.absolute_data_folder, dicom_series.folder)
-    dst = os.path.join(dst_folder, os.path.basename(filename))
+    dst = os.path.join(dst_folder, base_filename)
     if not os.path.exists(dst_folder):
         os.makedirs(dst_folder)
     copyfile(src, dst)
@@ -334,6 +376,13 @@ def insert_dicom_file_dataset(db, filename, dicom_series, ds):
     syd.insert_one(db['DicomFile'], dicom_file)
     
     return dicom_file
+
+# -----------------------------------------------------------------------------
+def similar(a, b):
+    '''
+    Distance between strings
+    '''
+    return SequenceMatcher(None, a, b).ratio()
 
 
 # -----------------------------------------------------------------------------

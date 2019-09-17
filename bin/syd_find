@@ -128,7 +128,7 @@ def syd_find(table_name, grep, db,
     if delete:
         ids = [i['id'] for i in res]
         syd.delete(db[table_name], ids)
-        print('Delete: ',ids)
+        print('Deleted',table_name, ids)
 
 
 # -----------------------------------------------------------------------------
