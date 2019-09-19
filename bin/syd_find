@@ -81,10 +81,10 @@ def syd_find(table_name, grep, db,
         return
 
     # DEBUG
-    if update_image_info:
-        for e in res:
-            syd.set_dicom_image_info(db, e);
-            syd.update_one(db['DicomSerie'], e)
+    # if update_image_info:
+    #     for e in res:
+    #         syd.set_dicom_image_info(db, e);
+    #         syd.update_one(db['DicomSerie'], e)
 
     if short:
         s=''

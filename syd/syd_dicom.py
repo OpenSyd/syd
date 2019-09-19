@@ -33,15 +33,21 @@ Functions
 ---------
 - insert_dicom_from_folder
 - insert_dicom_from_file
-- insert_dicom_series_from_dataset(db, ds, patient_id)
-- insert_dicom_study_from_dataset(db, ds, patient_id)
-- insert_dicom_file_dataset(db, filename, dicom_series, ds)
+- insert_dicom_series_from_dataset(db, ds, patient)
+- insert_dicom_study_from_dataset(db, ds, patient)
+- insert_dicom_file_from_dataset(db, ds, filename, dicom_series)
 
 - build_dicom_series_folder(db, dicom_series)
-- get_or_create_patient_dataset(db, ds, patient_id)
-- guess_injection_from_dicom_dataset(db, ds)
-- get_dicom_image_info_from_dataset(ds)
+- guess_or_create_patient(db, ds)
+- guess_or_create_injection(db, ds, dicom_series)
+- get_dicom_image_info(ds)
 
+
+Verbose policy
+--------------
+
+- print whe file is ignored
+- print whe file is inserted
 
 
 Principles
@@ -49,7 +55,7 @@ Principles
 
 Always ignore if a uid already present in the DB. To update, delete the elements first.
 
-Files are inserted and copied successively, not in batch. Maybe slower.
+Files are inserted and copied successively, not in batch. Maybe slower. But allow cancel.
 
 Patient are created according to Dicom tag 'PatientID'. If is null or
 void, will still create a patient. Alternatively, patient may be
@@ -146,7 +152,7 @@ def set_dicom_triggers(db):
     # pass
 
 # -----------------------------------------------------------------------------
-def insert_dicom_from_folder(db, folder, patient_id):
+def insert_dicom_from_folder(db, folder, patient):
     '''
     New insert dicom from folder
     '''
@@ -162,7 +168,7 @@ def insert_dicom_from_folder(db, folder, patient_id):
         # ignore if this is a folder
         if (os.path.isdir(f)): continue
         # read the dicom file
-        d = insert_dicom_from_file(db, f, patient_id)
+        d = insert_dicom_from_file(db, f, patient)
         if d != {}:
             dicoms.append(d)
         # update progress bar
@@ -172,7 +178,7 @@ def insert_dicom_from_folder(db, folder, patient_id):
 
 
 # -----------------------------------------------------------------------------
-def insert_dicom_from_file(db, filename, patient_id):
+def insert_dicom_from_file(db, filename, patient):
     '''
     Insert or update a dicom from a filename
     '''
@@ -202,23 +208,23 @@ def insert_dicom_from_file(db, filename, patient_id):
     series_uid = ds.data_element("SeriesInstanceUID").value
     dicom_series = syd.find_one(db['DicomSeries'], series_uid=series_uid)
     if dicom_series is None:
-        dicom_series = insert_dicom_series_from_dataset(db, ds, patient_id)
+        dicom_series = insert_dicom_series_from_dataset(db, ds, patient)
         dicom_series = syd.insert_one(db['DicomSeries'], dicom_series)
         tqdm.write('Insert new DicomSeries {}'.format(dicom_series))
 
     # update dicom file
-    dicom_file = insert_dicom_file_dataset(db, filename, dicom_series, ds)
+    dicom_file = insert_dicom_file_from_dataset(db, ds, filename, dicom_series)
     tqdm.write('Insert DicomFile {}'.format(dicom_file))
 
 
 # -----------------------------------------------------------------------------
-def insert_dicom_series_from_dataset(db, ds, patient_id):
+def insert_dicom_series_from_dataset(db, ds, patient):
 
     # retrieve study or create if not exist
     study_uid = ds.data_element("StudyInstanceUID").value
     dicom_study = syd.find_one(db['DicomStudy'], study_uid=study_uid)
     if dicom_study is None:
-        dicom_study = insert_dicom_study_from_dataset(db, ds, patient_id)
+        dicom_study = insert_dicom_study_from_dataset(db, ds, patient)
         dicom_study = syd.insert_one(db['DicomStudy'], dicom_study)
         tqdm.write('Insert new DicomStudy {}'.format(dicom_study))
 
@@ -274,18 +280,18 @@ def insert_dicom_series_from_dataset(db, ds, patient_id):
     dicom_series.acquisition_date = acquisition_date
     dicom_series.reconstruction_date = reconstruction_date
 
-    # try yo guess injection (later)
-    guess_injection_from_dicom_dataset(db, ds) # FIXME do it later
-    #dicom_series.injection_id = xxxx
-
     # folder
     dicom_series.folder = build_dicom_series_folder(db, dicom_series)
-    
+
     # image size
-    image_size, image_spacing = get_dicom_image_info_from_dataset(ds)
+    image_size, image_spacing = get_dicom_image_info(ds)
     dicom_series.image_size = image_size
     dicom_series.image_spacing = image_spacing
-    
+
+    # try to guess injection (later)
+    guess_or_create_injection(db, ds, dicom_study, dicom_series) # FIXME do it later
+    #dicom_series.injection_id = xxxx
+
     return dicom_series
 
 # -----------------------------------------------------------------------------
@@ -302,10 +308,11 @@ def build_dicom_series_folder(db, dicom_series):
 
 
 # -----------------------------------------------------------------------------
-def insert_dicom_study_from_dataset(db, ds, patient_id):
+def insert_dicom_study_from_dataset(db, ds, patient):
 
     # retrieve patient or create if not exist
-    patient = get_or_create_patient_dataset(db, ds, patient_id)
+    if not patient:
+        patient = guess_or_create_patient(db, ds)
 
     dicom_study = Box()
     dicom_study.study_uid = str(ds.data_element("StudyInstanceUID").value)
@@ -324,28 +331,30 @@ def insert_dicom_study_from_dataset(db, ds, patient_id):
     return dicom_study
 
 # -----------------------------------------------------------------------------
-def get_or_create_patient_dataset(db, ds, patient_id):
+def guess_or_create_patient(db, ds):
 
-    # retrieve patient or create if not exist
-    if patient_id == -1:
-        patient_dicom_id = ds.data_element("PatientID").value
-        patient = syd.find_one(db['Patient'], dicom_id=patient_dicom_id)
-        if patient is None:
-            patient = Box()
+    # tyy to retrieve patient from PatientID tag
+    patient_dicom_id = ds.data_element("PatientID").value
+    patient = syd.find_one(db['Patient'], dicom_id=patient_dicom_id)
+
+    # create if not exist
+    if patient is None:
+        patient = Box()
+        patient.dicom_id = patient_dicom_id
+        try:
             patient.name = str(ds.data_element("PatientName").value)
-            patient.dicom_id = patient_dicom_id
             patient.sex = ds.data_element("PatientSex").value
-            patient.num = 0
-            # FIXME --> to complete
-            patient = syd.insert_one(db['Patient'], patient)
-            tqdm.write('Insert new Patient {}'.format(patient))
-    else:
-        patient = syd.find_one(db['Patient'], id=patient_id)
+        except:
+            pass
+        patient.num = 0
+        # FIXME --> to complete
+        patient = syd.insert_one(db['Patient'], patient)
+        tqdm.write('Insert new Patient {}'.format(patient))
 
     return patient
 
 # -----------------------------------------------------------------------------
-def insert_dicom_file_dataset(db, filename, dicom_series, ds):
+def insert_dicom_file_from_dataset(db, ds, filename, dicom_series):
 
     dicom_file = Box()
     dicom_file.sop_uid = ds.data_element("SOPInstanceUID").value
@@ -354,13 +363,13 @@ def insert_dicom_file_dataset(db, filename, dicom_series, ds):
         dicom_file.instance_number = int(ds.InstanceNumber)
     except:
         pass #dicom_file.instance_number = 0
-        
+
     # insert file in folder
     base_filename = os.path.basename(filename)
     afile = Box()
     afile.folder = dicom_series.folder
     afile.filename = base_filename
-    # afil.md5 = later     
+    # afil.md5 = later
     afile = syd.insert_one(db['File'], afile)
 
     # copy the file
@@ -374,7 +383,7 @@ def insert_dicom_file_dataset(db, filename, dicom_series, ds):
     # insert the dicom_file
     dicom_file.file_id = afile.id
     syd.insert_one(db['DicomFile'], dicom_file)
-    
+
     return dicom_file
 
 # -----------------------------------------------------------------------------
@@ -386,10 +395,10 @@ def similar(a, b):
 
 
 # -----------------------------------------------------------------------------
-def guess_injection_from_dicom_dataset(db, ds):
+def guess_or_create_injection(db, ds, dicom_study, dicom_series):
 
     # EXAMPLE
-    
+
     #(0040, 2017) Filler Order Number / Imaging Servi LO: 'IM00236518'
     #(0054, 0016)  Radiopharmaceutical Information Sequence   1 item(s) ----
     #  (0018, 0031) Radiopharmaceutical                 LO: 'Other'
@@ -404,32 +413,128 @@ def guess_injection_from_dicom_dataset(db, ds):
     #    (0008, 0102) Coding Scheme Designator            SH: 'SRT'
     #    (0008, 0104) Code Meaning                        LO: '^68^Galium'
 
-    all_rad = syd.find(db['Radionuclide'])
-    rad_names = [ n.name for n in all_rad]
-    found_rad = ''
-    rad_date = ''
+    # 1. try read Radiopharmaceutical Information Sequence
+         # 2. Yes: read injection, info
+         # 3. try to find one: rad, patient, date, total
+         # 4. if no CREATE
+    # else
+         # try to find one: patient, date --> max delay few days
 
     try:
-        rad_seq = ds[0x0054,0x0016]           # (0054, 0016) Radiopharmaceutical Information Sequence
+        # (0054, 0016) Radiopharmaceutical Information Sequence
+        rad_seq = ds[0x0054,0x0016]
         for rad in rad_seq:
-            r = rad[0x0018, 0x0031]           # (0018, 0031) Radiopharmaceutical
-            code_seq = rad[0x0054,0x0300]     # (0054, 0300) Radionuclide Code Sequence
-            for code in code_seq:
-                c = code[0x0008,0x0104].value # (0008, 0104) Code Meaning
-                s = [similar(c,n) for n in rad_names]
-                s = np.array(s)
-                i= np.argmax(s)
-                found_rad = rad_names[i]
-                rad_date = rad[0x0018,0x1078].value # (0018, 1078) Radiopharmaceutical Start DateTime
+            # (0018, 0031) Radiopharmaceutical
+            rad_rad = rad[0x0018, 0x0031]
+            rad_info = Box()
+            # (0054, 0300) Radionuclide Code Sequence
+            rad_code_seq = rad[0x0054,0x0300]
+            # (0018, 1074) Radionuclide Total Dose
+            rad_info.total_dose = rad[0x0018,0x1074].value
+            #  (0018, 1076) Radionuclide Positron Fraction
+            rad_info.positron_fraction = rad[0x0018,0x1076].value
+            rad_info.code = []
+            rad_info.date = []
+            for code in rad_code_seq:
+                # (0008, 0104) Code Meaning
+                rad_info.code.append(code[0x0008,0x0104].value)
+                # (0018, 1078) Radiopharmaceutical Start DateTime
+                rad_info.date.append(rad[0x0018,0x1078].value)
+            injection = search_injection_from_info(db, dicom_study, rad_info)
+            if not injection:
+                injection = new_injection(db, dicom_study, rad_info)
     except:
-          tqdm.write('Cannot find info on radiopharmaceutical')
-          return {}
-        
-    return {}
+        tqdm.write('Cannot find info on radiopharmaceutical in DICOM')
+        injection = search_injection(db, ds, dicom_study, dicom_series)
+
+    # return injection (could be None)
+    return injection
+
+# -----------------------------------------------------------------------------
+def search_injection_from_info(db, dicom_study, rad_info):
+
+    patient_id = dicom_study.patient_id
+    all_rad = syd.find(db['Radionuclide'])
+    rad_names = [ n.name for n in all_rad]
+
+    if len(rad_info.code) != 1:
+        tqdm.write('Error: several radionuclide found. Dont know what to do')
+        return None
+
+    # look for radionuclide name and date
+    rad_code = rad_info.code[0]
+    rad_date = datetime.strptime(rad_info.date[0], '%Y%m%d%H%M%S')
+    s = [similar(rad_code,n) for n in rad_names]
+    s = np.array(s)
+    i= np.argmax(s)
+    rad_name = rad_names[i]
+
+    # search if injections exist for this patient and this rad
+    radionuclide = syd.find_one(db['Radionuclide'], name = rad_name)
+    rad_info.radionuclide_id = radionuclide.id
+    inj_candidates = syd.find(db['Injection'],
+                              radionuclide_id = radionuclide.id,
+                              patient_id = patient_id)
+    if len(inj_candidates) == 0:
+        return None
+
+    # check date and activity
+    max_time_days = timedelta(1.0/24.0/60*10) # 10 minutes # FIXME  <------------------------ options
+    found = None
+    for ic in inj_candidates:
+        d = ic.date
+        if d>rad_date:
+            t = d-rad_date
+        else:
+            t = rad_date-d
+        if t <= max_time_days:
+            act_diff = np.fabs(ic.activity_in_MBq - rad_info.total_dose)
+            found = ic
+
+    if found:
+        tqdm.write(f'Injection found : {found}')
+        return found
+    else:
+        return None
 
 
 # -----------------------------------------------------------------------------
-def get_dicom_image_info_from_dataset(ds):
+def search_injection(db, ds, dicom_study, dicom_series):
+    patient_id = dicom_study.patient_id
+    inj_candidates = syd.find(db['Injection'], patient_id = patient_id)
+    dicom_date = dicom_series.acquisition_date
+
+    # check date is before the dicom
+    found = None
+    for ic in inj_candidates:
+        if ic.date < dicom_date:
+            if found:
+                tqdm.write('Several injections may be associated. Ignoring injection')
+            else:
+                found = ic
+
+    if found:
+        tqdm.write(f'Injection found : {found}')
+        return found
+    else:
+        return None
+
+
+# -----------------------------------------------------------------------------
+def new_injection(db, dicom_study, rad_info):
+    injection = Box()
+    injection.radionuclide_id = rad_info.radionuclide_id
+    injection.patient_id = dicom_study.patient_id
+    injection.activity_in_MBq = rad_info.total_dose/1e6
+    injection.date = datetime.strptime(rad_info.date[0], '%Y%m%d%H%M%S')
+
+    syd.insert_one(db['Injection'], injection)
+    tqdm.write(f'Insert new injection {injection}')
+    return injection
+
+
+# -----------------------------------------------------------------------------
+def get_dicom_image_info(ds):
 
     sx = sy = sz = '?'
     try:
@@ -464,5 +569,3 @@ def get_dicom_image_info_from_dataset(ds):
             img_spacing = '{}x{}'.format(spacing_x,spacing_y)
 
     return img_size, img_spacing
-
-

@@ -11,9 +11,9 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.argument('folder')
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
-@click.option('--patient', '-p', default=-1,
+@click.option('--patient_id', '-p', default=None,
               help='associate *all* found dicom with this patient id')
-def syd_insert_dicom(folder, db, patient):
+def syd_insert_dicom(folder, db, patient_id):
     '''
     syd_insert_dicom
 
@@ -28,6 +28,15 @@ def syd_insert_dicom(folder, db, patient):
     # look and insert dicom
     #syd.insert_dicom(db, folder, patient)
 
+    # look for patient if needed
+    patient = None
+    if patient_id is not None:
+        patient = syd.find_one(db['Patient'], id=patient_id)
+        if patient == None:
+            print(f'Error, cannot find patient {patient_id}')
+            exit()
+
+    # go
     if (os.path.isdir(folder)):    
         syd.insert_dicom_from_folder(db, folder, patient)
     else:

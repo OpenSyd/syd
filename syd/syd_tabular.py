@@ -96,7 +96,7 @@ def tabular(db, table_name, line_format, elements):
         for table, field in zip(tables, fields):
             # consider table.field -> Table and add field to the current element
             eid = table+'_id'
-            print(table, field, eid, e)
+            #print(table, field, eid, e)
             eid = e[eid]
             table_name = table.replace('_',' ').title().replace(' ','')
             subelem = syd.find_one(db[table_name], id=eid)
@@ -140,7 +140,7 @@ def tabular(db, table_name, line_format, elements):
     #print(lfh)
     #print('e', e)
     #print(lfh.format_map(e))
-    print(header)
+    #print(header)
                 
     return tabular_str(f, elements);
 
