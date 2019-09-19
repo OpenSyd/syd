@@ -8,6 +8,7 @@ import re
 from tokenize import tokenize, NUMBER
 from io import BytesIO
 from box import Box, BoxKeyError
+from difflib import SequenceMatcher
 
 # -----------------------------------------------------------------------------
 def str_to_date(str):
@@ -39,7 +40,7 @@ def dcm_str_to_date(str):
 # -----------------------------------------------------------------------------
 # color constant
 color_error = colored.fg("red") + colored.attr("bold")
-color_warning = colored.fg("orange_4a")
+color_warning = colored.fg("orange_1")
 
 # -----------------------------------------------------------------------------
 # color constant
@@ -81,13 +82,41 @@ def parse_piped_input(l):
     return l
 
 
+# -----------------------------------------------------------------------------
+def str_match(a, b):
+    '''
+    Distance between strings
+    '''
+    return SequenceMatcher(None, a, b).ratio()
+
+# -----------------------------------------------------------------------------
+def guess_table_name(db, table_name):
+    '''
+    Guess table name according to closest str distance.
+    Return None if the match is lower than 0.5
+    '''
+    if table_name in db:
+        return table_name
+
+    max_match = 0
+    f = ''
+    for t in db.tables:
+        d = syd.str_match(table_name, str(t))
+        if d > max_match:
+            f = str(t)
+            max_match = d
+
+    if max_match < 0.5:
+        return None
+    return f
+
+
 # # -----------------------------------------------------------------------------
 # def dump_elements(elements):
 #     '''
 #     Pretty dump some elements
 #     FIXME use table_name + dump_format to pretty dump
 #     '''
-
 #     for e in elements:
 #         s = ' '.join(str(x) for x in e.values())
 #         print(s)
@@ -99,4 +128,3 @@ def parse_piped_input(l):
 #     for v in element.values():
 #         s += str(v)+' '
 #     print(s)
-

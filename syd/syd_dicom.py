@@ -12,7 +12,6 @@ from .syd_db import *
 from shutil import copyfile
 from datetime import datetime
 from datetime import timedelta
-from difflib import SequenceMatcher
 
 '''
 DICOM Module
@@ -39,15 +38,19 @@ Functions
 
 - build_dicom_series_folder(db, dicom_series)
 - guess_or_create_patient(db, ds)
-- guess_or_create_injection(db, ds, dicom_series)
 - get_dicom_image_info(ds)
+
+- guess_or_create_injection(db, ds, dicom_series)
+- search_injection_from_info(db, dicom_study, rad_info)
+- search_injection(db, ds, dicom_study, dicom_series)
+- new_injection(db, dicom_study, rad_info)
 
 
 Verbose policy
 --------------
 
-- print whe file is ignored
-- print whe file is inserted
+- print when a file is ignored
+- print when a file is inserted
 
 
 Principles
@@ -57,9 +60,13 @@ Always ignore if a uid already present in the DB. To update, delete the elements
 
 Files are inserted and copied successively, not in batch. Maybe slower. But allow cancel.
 
-Patient are created according to Dicom tag 'PatientID'. If is null or
-void, will still create a patient. Alternatively, patient may be
+Patient are created according to Dicom tag 'PatientID'. If it is null
+or void, will still create a patient. Alternatively, patient may be
 indicated in the function call.
+
+Injection: search in the Dicom some tag, if found, try to match with
+existing injection or create a new one. If no information in the
+dicom, try to match with injection (patient and date), or ignore.
 
 '''
 
@@ -387,14 +394,6 @@ def insert_dicom_file_from_dataset(db, ds, filename, dicom_series):
     return dicom_file
 
 # -----------------------------------------------------------------------------
-def similar(a, b):
-    '''
-    Distance between strings
-    '''
-    return SequenceMatcher(None, a, b).ratio()
-
-
-# -----------------------------------------------------------------------------
 def guess_or_create_injection(db, ds, dicom_study, dicom_series):
 
     # EXAMPLE
@@ -464,7 +463,7 @@ def search_injection_from_info(db, dicom_study, rad_info):
     # look for radionuclide name and date
     rad_code = rad_info.code[0]
     rad_date = datetime.strptime(rad_info.date[0], '%Y%m%d%H%M%S')
-    s = [similar(rad_code,n) for n in rad_names]
+    s = [str_match(rad_code,n) for n in rad_names]
     s = np.array(s)
     i= np.argmax(s)
     rad_name = rad_names[i]

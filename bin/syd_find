@@ -20,7 +20,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--line_format', '-p', default='',
               help='Explicit print format')
 
-@click.option('--print_line_format_name', 
+@click.option('--print_line_format_name',
               help='Print all the available format names')
 
 @click.option('--delete/--no-delete', '-d', default=False,
@@ -50,11 +50,15 @@ def syd_find(table_name, grep, db,
     db_filename = syd.get_db_filename(db)
     db = syd.open_db(db_filename)
 
-    # check table exist FIXME --> check lowercase ?
-    if not table_name in db:
+    # check table exist
+    tname = syd.guess_table_name(db, table_name)
+    if not tname:
         print('Table {} does not exist. Tables: {}'.format(table_name, db.tables))
         exit(0)
-    table = db[table_name]
+    # not sure if worth to warn user 
+    #if tname != table_name:
+    #    syd.warning(f'Warning: table {table_name} does not exist, we guess it is table {tname}')
+    table = db[tname]
 
     # get elements
     if len(id) == 0:
@@ -134,4 +138,3 @@ def syd_find(table_name, grep, db,
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     syd_find()
-
