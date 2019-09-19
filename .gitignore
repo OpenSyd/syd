@@ -2,3 +2,9 @@
 /syd/__pycache__/
 /syd.egg-info/
 *~
+db/*
+save_reg_ok/*
+temp/*
+.DS_store
+
+
