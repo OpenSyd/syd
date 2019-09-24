@@ -100,7 +100,7 @@ def syd_find(table_name, grep, db,
     # print
     if line_format == '':
         line_format = syd.tabular_get_line_format(db, table_name, line_format_name, res[0])
-    s = syd.tabular(db, table_name, line_format, res)
+    s = syd.tabular2(db, table_name, line_format, res)
     print(s)
 
     # vv ?

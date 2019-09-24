@@ -260,3 +260,17 @@ def find_all(table):
     return elements
 
 
+# -----------------------------------------------------------------------------
+def find_join_one(element, table, field_id):
+    '''
+    Retrieve join element with tablename_id
+    '''
+    if field_id in element:
+        id = element[field_id]
+    else:
+        return None
+    elem = syd.find_one(table, id=id)
+    if not elem:
+        return None
+    return Box(elem)
+

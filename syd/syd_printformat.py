@@ -31,11 +31,15 @@ def create_printformat_table(db):
           'format': '{id:4} [{patient_id}] {patient.name:<5} {radionuclide.name:5} {activity_in_MBq:8.2f} MBq  {date:%Y-%m-%d %H:%M} {cycle}\n'
         },
 
-        { 'name': 'default', 'table_name': 'DicomSeriesFIXME',
-          'format': '{id:4} [{dicomstudy.patient.name}] {patient.name:<5} {modality} {acquisition_date:%Y-%m-%d-%H:%M} {series_description} / {study_description} / {study_name} / {dataset_name} {image_size} {image_spacing}\n'
+        { 'name': 'default', 'table_name': 'DicomStudy',
+          'format': '{id:4} {patient.name:<5} {study_description} / {study_name}\n'
         },
         
-        { 'name': 'file', 'table_name': 'DicomSerieFIXME ',
+        { 'name': 'default', 'table_name': 'DicomSeries',
+          'format': '{id:4} {dicom_study.patient.name: <10} {modality} {acquisition_date:%Y-%m-%d-%H:%M} {image_size} {image_spacing} / {series_description} / {dicom_study.study_description} / {dicom_study.study_name} / {dataset_name}\n'
+        },
+        
+        { 'name': 'file', 'table_name': 'DicomSeries',
           'format': '{id:4} {absolute_filename} \n'
         },
         
@@ -52,7 +56,7 @@ def create_printformat_table(db):
         },
 
         { 'name': 'default', 'table_name': 'Image',
-          'format': '{id:4} {patient.name:<5} {modality} {acquisition_date:%Y-%m-%d-%H:%M}  {injection.radionuclide.name:5} {injection.date:%Y-%m-%d-%H:%M}  {dicom_serie_id} {pixel_type} {pixel_unit} {dicom_serie_id} {dicom_serie.series_description} / {dicom_serie.study_description} / {dicom_serie.study_name} / {dicom_serie.dataset_name}\n'
+          'format': '{id:4} {patient.name:<5} {modality} {acquisition_date:%Y-%m-%d-%H:%M}  {injection.radionuclide.name:5} {injection.date:%Y-%m-%d-%H:%M}  {dicom_series_id} {pixel_type} {pixel_unit} {dicom_series.series_description} / {dicom_series.dicom_study.study_description} / {dicom_series.dicom_study.study_name} / {dicom_series.dataset_name}\n'
         },
 
     ]       

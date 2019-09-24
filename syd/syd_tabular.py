@@ -19,6 +19,7 @@ def tabular_get_line_format(db, table_name, format_name, element):
     Retrieve the line format from the format name to build a tabluar
     '''
 
+    table_name = syd.guess_table_name(db, table_name)    
     formats = syd.find(db['PrintFormat'], table_name=table_name)
     df = None
     for f in formats:
@@ -39,12 +40,81 @@ def tabular_get_line_format(db, table_name, format_name, element):
     return df
 
 # -----------------------------------------------------------------------------
+def get_sub_field_info(db, field_name):
+    #print('field_name: ', field_name)
+    fields = field_name.split('.') #re.findall(r'(\w)\.(\w)', field_name)
+    #print(fields)
+    a = Box()
+    a.table_names = []
+    a.tables = []
+    a.field_id_names = []
+    a.field_format_name = ''
+    for f in fields[0:-1]:
+        tname = syd.guess_table_name(db, f)
+        if tname in db:
+            #print(tname)
+            table = db[tname]
+        else:
+            table = None
+        a.table_names.append(tname)
+        a.tables.append(table)
+        a.field_id_names.append(f+'_id')
+        a.field_format_name += f+'_'
+
+    a.field_format_name += fields[-1]
+    a.field_name = fields[-1]
+    a.initial_field_name = field_name
+    #print('a', a)
+    return a
+
+
+def get_sub_element(db, element, tables, field_id_names):
+    se = element
+    for table, field_id in zip(tables, field_id_names):
+        if table:            
+            se = syd.find_join_one(se, table, field_id)
+        else:
+            return None
+        #print('table id', table, field_id, se)
+    return se
+
+
+# -----------------------------------------------------------------------------
+def tabular2(db, table_name, line_format, elements):
+    #print('tabular2', table_name, line_format, len(elements))
+
+    f = line_format
+    subelements = re.findall(r'{(\w+)\.(.*?)[:\}]', f)
+    subfields = []
+    for e in subelements:
+        #print('format', e)
+        a = get_sub_field_info(db, e[0]+'.'+e[1])
+        subfields.append(a)
+    #print(subfields)
+
+    #print('--------------------------------')
+    for sub in subfields:
+        f = f.replace(sub.initial_field_name, sub.field_format_name)
+        #print('sub', sub)
+        #print('replace', f)
+        for elem in elements:
+            se = get_sub_element(db, elem, sub.tables, sub.field_id_names)
+            if se and sub.field_name in se:
+                elem[sub.field_format_name] = se[sub.field_name]
+            #print(se)
+
+    #print('--------------------------------')
+    #print(f)
+    #print(elements)
+    return tabular_str(f, elements);
+
+# -----------------------------------------------------------------------------
 def tabular(db, table_name, line_format, elements):
     '''
     Pretty dump some elements with a tabular
     Modify the elements to include sub-fields
     '''
-    
+
     # find all sub-fields XXX.YYY and add the corresponding fields in the elements list
     f = line_format
 
@@ -77,7 +147,7 @@ def tabular(db, table_name, line_format, elements):
                 subelem = syd.find_one(db[table2_name], id=subelem[table2+'_id'])
                 if subelem != None:
                     e[table1+"_"+table2+"_"+field] = subelem[field]
-                
+
     # with two levels
     subelements = re.findall(r'{\w+\.\w+', f)
     tables = []
@@ -102,7 +172,7 @@ def tabular(db, table_name, line_format, elements):
             subelem = syd.find_one(db[table_name], id=eid)
             if subelem != None:
                 e[table+"_"+field] = subelem[field]
-                
+
     subelements = re.findall(r'{absolute_filename', f)
 
     for s in subelements:
@@ -141,7 +211,7 @@ def tabular(db, table_name, line_format, elements):
     #print('e', e)
     #print(lfh.format_map(e))
     #print(header)
-                
+
     return tabular_str(f, elements);
 
 # -----------------------------------------------------------------------------
@@ -196,7 +266,7 @@ def tabular_str(format_line, elements):
     try:
         #t = format_line.format_map(SafeKey(d))
         t = str_format_map(format_line, elements[0])
-        
+
     except BoxKeyError as err:
         s = "Error while formating "+str(err)+" probably does not exist in this table"
         raise_except(s)
