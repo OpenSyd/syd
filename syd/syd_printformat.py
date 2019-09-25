@@ -21,6 +21,7 @@ def create_printformat_table(db):
 
     # insert default elements
     r = [
+        
         { 'name': 'default', 'table_name': 'Patient',
           'format': '{id:3} {num:3} {name: <20} {dicom_id: <10}\n' },
         
@@ -36,7 +37,7 @@ def create_printformat_table(db):
         },
         
         { 'name': 'default', 'table_name': 'DicomSeries',
-          'format': '{id:4} {dicom_study.patient.name: <10} {modality} {acquisition_date:%Y-%m-%d-%H:%M} {image_size} {image_spacing} / {series_description} / {dicom_study.study_description} / {dicom_study.study_name} / {dataset_name}\n'
+          'format': '{id:4} {dicom_study.patient.name: <10} {injection.radionuclide.name} {injection.activity_in_MBq} {modality} {acquisition_date:%Y-%m-%d-%H:%M} {image_size} {image_spacing} / {series_description} / {dicom_study.study_description} / {dicom_study.study_name} / {dataset_name}\n'
         },
         
         { 'name': 'file', 'table_name': 'DicomSeries',
@@ -59,6 +60,10 @@ def create_printformat_table(db):
           'format': '{id:4} {patient.name:<5} {modality} {acquisition_date:%Y-%m-%d-%H:%M}  {injection.radionuclide.name:5} {injection.date:%Y-%m-%d-%H:%M}  {dicom_series_id} {pixel_type} {pixel_unit} {dicom_series.series_description} / {dicom_series.dicom_study.study_description} / {dicom_series.dicom_study.study_name} / {dicom_series.dataset_name}\n'
         },
 
+        { 'name': 'file', 'table_name': 'PrintFormat',
+          'format': '{id:4} {name} {table_name} {format})\n'
+        },
+        
     ]       
 
     syd.insert(db['PrintFormat'], r)

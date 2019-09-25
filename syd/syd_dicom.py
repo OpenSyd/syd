@@ -296,8 +296,9 @@ def insert_dicom_series_from_dataset(db, ds, patient):
     dicom_series.image_spacing = image_spacing
 
     # try to guess injection (later)
-    guess_or_create_injection(db, ds, dicom_study, dicom_series) # FIXME do it later
-    #dicom_series.injection_id = xxxx
+    inj = guess_or_create_injection(db, ds, dicom_study, dicom_series) # FIXME do it later
+    if inj:
+        dicom_series.injection_id = inj.id
 
     return dicom_series
 

@@ -19,7 +19,7 @@ def tabular_get_line_format(db, table_name, format_name, element):
     Retrieve the line format from the format name to build a tabluar
     '''
 
-    table_name = syd.guess_table_name(db, table_name)    
+    table_name = syd.guess_table_name(db, table_name)
     formats = syd.find(db['PrintFormat'], table_name=table_name)
     df = None
     for f in formats:
@@ -41,9 +41,7 @@ def tabular_get_line_format(db, table_name, format_name, element):
 
 # -----------------------------------------------------------------------------
 def get_sub_field_info(db, field_name):
-    #print('field_name: ', field_name)
     fields = field_name.split('.') #re.findall(r'(\w)\.(\w)', field_name)
-    #print(fields)
     a = Box()
     a.table_names = []
     a.tables = []
@@ -52,167 +50,56 @@ def get_sub_field_info(db, field_name):
     for f in fields[0:-1]:
         tname = syd.guess_table_name(db, f)
         if tname in db:
-            #print(tname)
             table = db[tname]
         else:
             table = None
         a.table_names.append(tname)
         a.tables.append(table)
         a.field_id_names.append(f+'_id')
-        a.field_format_name += f+'_'
+        a.field_format_name += f+'->'
 
     a.field_format_name += fields[-1]
     a.field_name = fields[-1]
     a.initial_field_name = field_name
-    #print('a', a)
     return a
 
 
+# -----------------------------------------------------------------------------
 def get_sub_element(db, element, tables, field_id_names):
     se = element
     for table, field_id in zip(tables, field_id_names):
-        if table:            
+        if table:
             se = syd.find_join_one(se, table, field_id)
         else:
             return None
-        #print('table id', table, field_id, se)
     return se
 
 
 # -----------------------------------------------------------------------------
 def tabular2(db, table_name, line_format, elements):
-    #print('tabular2', table_name, line_format, len(elements))
-
     f = line_format
     subelements = re.findall(r'{(\w+)\.(.*?)[:\}]', f)
     subfields = []
     for e in subelements:
-        #print('format', e)
         a = get_sub_field_info(db, e[0]+'.'+e[1])
         subfields.append(a)
-    #print(subfields)
 
-    #print('--------------------------------')
     for sub in subfields:
         f = f.replace(sub.initial_field_name, sub.field_format_name)
-        #print('sub', sub)
-        #print('replace', f)
         for elem in elements:
             se = get_sub_element(db, elem, sub.tables, sub.field_id_names)
             if se and sub.field_name in se:
                 elem[sub.field_format_name] = se[sub.field_name]
-            #print(se)
 
-    #print('--------------------------------')
-    #print(f)
-    #print(elements)
-    return tabular_str(f, elements);
-
-# -----------------------------------------------------------------------------
-def tabular(db, table_name, line_format, elements):
-    '''
-    Pretty dump some elements with a tabular
-    Modify the elements to include sub-fields
-    '''
-
-    # find all sub-fields XXX.YYY and add the corresponding fields in the elements list
-    f = line_format
-
-    # with three levels
-    subelements = re.findall(r'{\w+\.\w+\.\w+', f)
-    tables1 = []
-    tables2 = []
-    fields = []
-    for e in subelements:
-        spl = e.split('.')
-        table1 = spl[0][1:] # remove first '{'
-        table2 = spl[1] # remove first '{'
-        field = spl[2]
-        tables1.append(table1)
-        tables2.append(table2)
-        fields.append(field)
-        f = f.replace(table1+'.'+table2+'.'+field, table1+'_'+table2+'_'+field, 1)
-
-    # add fields in elements
-    # If not found -> ignore the field
-    for e in elements:
-        for table1, table2, field in zip(tables1, tables2, fields):
-            # consider table.field -> Table and add field to the current element
-            eid1 = table1+'_id'
-            eid1 = e[eid1]
-            table1_name = table1.replace('_',' ').title().replace(' ','')
-            table2_name = table2.replace('_',' ').title().replace(' ','')
-            subelem = syd.find_one(db[table1_name], id=eid1)
-            if subelem != None:
-                subelem = syd.find_one(db[table2_name], id=subelem[table2+'_id'])
-                if subelem != None:
-                    e[table1+"_"+table2+"_"+field] = subelem[field]
-
-    # with two levels
-    subelements = re.findall(r'{\w+\.\w+', f)
-    tables = []
-    fields = []
-    for e in subelements:
-        spl = e.split('.')
-        table = spl[0][1:] # remove first '{'
-        field = spl[1]
-        tables.append(table)
-        fields.append(field)
-        f = f.replace(table+'.'+field, table+'_'+field, 1)
-
-    # add fields in elements
-    # If not found -> ignore the field
-    for e in elements:
-        for table, field in zip(tables, fields):
-            # consider table.field -> Table and add field to the current element
-            eid = table+'_id'
-            #print(table, field, eid, e)
-            eid = e[eid]
-            table_name = table.replace('_',' ').title().replace(' ','')
-            subelem = syd.find_one(db[table_name], id=eid)
-            if subelem != None:
-                e[table+"_"+field] = subelem[field]
-
-    subelements = re.findall(r'{absolute_filename', f)
-
-    for s in subelements:
-        if (table_name == 'DicomSeries'):
-            for e in elements:
-                files = syd.get_dicom_serie_files(db, e)
-                e['absolute_filename'] = syd.get_file_absolute_filename(db, files[0])
-        if (table_name == 'Image'):
-            for e in elements:
-                fn = syd.get_image_filename(db, e)
-                e['absolute_filename'] = fn
-        if (table_name == 'File'):
-            for e in elements:
-                fn = syd.get_file_absolute_filename(db, e)
-                e['absolute_filename'] = fn
-        if (table_name == 'DicomFile'):
-            for e in elements:
-                fi = syd.find_one(db['File'], id=e.file_id)
-                fn = syd.get_file_absolute_filename(db, fi)
-                e['absolute_filename'] = fn
-
-    # add header
-    lfh = f
-    subelements = re.findall(r'{\w+', lfh)
+    # header: list of fields
+    format_headers = re.findall(r'{(.*?)[:\}]', f)
     header = ''
-    e = {}
-    for s in subelements:
-        s = s[1:]
-        e[s] = s
-        header += s+' '
-    #print('before', lfh)
-    #lfh = re.sub(r':([0-9.]*)d',r':\1', lfh)
-    #lfh = re.sub(r':([0-9.]*)f',r':\1', lfh)
-    #print('after', lfh)
-    #print(lfh)
-    #print('e', e)
-    #print(lfh.format_map(e))
-    #print(header)
+    for h in format_headers:
+        header += h+' '
 
-    return tabular_str(f, elements);
+    header += '\n'
+    header += tabular_str(f, elements);
+    return header
 
 # -----------------------------------------------------------------------------
 def get_field_value(field_name, mapping):
@@ -245,9 +132,6 @@ def str_format_map(format_string, mapping):
         if field_name is not None:
             field_value, found = get_field_value(field_name, mapping)
             if not found:
-                # text = '{{{}{}{}}}'.format(field_value,
-                #                            conversion,
-                #                            format_spec)
                 text = '?'
             else:
                 format_string = '{{{}{}}}'.format(conversion, format_spec)
@@ -266,7 +150,6 @@ def tabular_str(format_line, elements):
     try:
         #t = format_line.format_map(SafeKey(d))
         t = str_format_map(format_line, elements[0])
-
     except BoxKeyError as err:
         s = "Error while formating "+str(err)+" probably does not exist in this table"
         raise_except(s)

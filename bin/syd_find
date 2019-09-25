@@ -58,7 +58,8 @@ def syd_find(table_name, grep, db,
     # not sure if worth to warn user 
     #if tname != table_name:
     #    syd.warning(f'Warning: table {table_name} does not exist, we guess it is table {tname}')
-    table = db[tname]
+    table_name = tname
+    table = db[table_name]
 
     # get elements
     if len(id) == 0:
@@ -83,12 +84,6 @@ def syd_find(table_name, grep, db,
 
     if len(res) == 0:
         return
-
-    # DEBUG
-    # if update_image_info:
-    #     for e in res:
-    #         syd.set_dicom_image_info(db, e);
-    #         syd.update_one(db['DicomSerie'], e)
 
     if short:
         s=''
