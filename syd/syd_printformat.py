@@ -44,8 +44,8 @@ def create_printformat_table(db):
           'format': '{id:4} {absolute_filename} \n'
         },
         
-        { 'name': 'file', 'table_name': 'DicomFile',
-          'format': '{id:4} {absolute_filename} \n'
+        { 'name': 'default', 'table_name': 'DicomFile',
+          'format': '{id:4} {file_id} {dicom_series.dicom_study.patient.name} {instance_number} {sop_uid} {absolute_filename} \n'
         },
         
         { 'name': 'file', 'table_name': 'File',
