@@ -265,6 +265,8 @@ def find_join_one(element, table, field_id):
     '''
     Retrieve join element with tablename_id
     '''
+    if not element:
+        return None
     if field_id in element:
         id = element[field_id]
     else:
