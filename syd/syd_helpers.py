@@ -110,21 +110,25 @@ def guess_table_name(db, table_name):
         return None
     return f
 
+# -----------------------------------------------------------------------------
+def filter_elements(elements, grep):
+    '''
+    Return the list of elements that match the grep
+    '''
+    if len(grep) == 0:
+        return elements
 
-# # -----------------------------------------------------------------------------
-# def dump_elements(elements):
-#     '''
-#     Pretty dump some elements
-#     FIXME use table_name + dump_format to pretty dump
-#     '''
-#     for e in elements:
-#         s = ' '.join(str(x) for x in e.values())
-#         print(s)
+    res = []
+    for e in elements:
+        # make a str
+        s = ''.join(str(x) for x in e.values())
+        found=True
+        for g in grep:
+            if not re.search(g, s):
+                found=False
+                break
+            if found:
+                res.append(e)
 
+    return res
 
-# # -----------------------------------------------------------------------------
-# def dump(element):
-#     s = ''
-#     for v in element.values():
-#         s += str(v)+' '
-#     print(s)

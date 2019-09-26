@@ -67,36 +67,51 @@ def syd_find(table_name, grep, db,
     else:
         elements = syd.find(table, id=id)
 
-    # grep
-    res = []
-    if len(grep) == 0:
-        res = [e for e in elements]
-    else:
-        for e in elements:
-            s = ''.join(str(x) for x in e.values())
-            found=True
-            for g in grep:
-                if not re.search(g, s):
-                    found=False
-                    break
-            if found:
-                res.append(e)
-
-    if len(res) == 0:
-        return
-
+    # only ids ? 
     if short:
         s=''
-        for e in res:
+        for e in elements:
             s = s+str(e['id'])+' '
         print(s)
         exit()
 
     # print
     if line_format == '':
-        line_format = syd.tabular_get_line_format(db, table_name, line_format_name, res[0])
-    s = syd.tabular2(db, table_name, line_format, res)
-    print(s)
+        line_format = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
+    header, s = syd.tabular2(db, table_name, line_format, elements)
+
+    # grep
+    res = ''
+    nb = 0
+    for e in s.splitlines():
+        found=True
+        for g in grep:
+            if not re.search(g, e):
+                found=False
+                break
+        if found:
+            res += e+'\n'
+            nb += 1
+
+    if nb == 0:
+        return
+    res = res[:-1] # remove last break line
+
+    # print everything
+    print(header)
+    print(res)
+
+    # print nb found
+    if nb == 1:
+        if nb != len(elements):
+            print(f'Found 1/{len(elements)} element')
+        else:
+            print(f'Found 1 element')
+    else:
+        if nb != len(elements):
+            print(f'Found {nb}/{len(elements)} elements')
+        else:
+            print(f'Found {nb} elements')
 
     # vv ?
     if vv:
@@ -119,12 +134,6 @@ def syd_find(table_name, grep, db,
         if filenames != '':
             #print('vv '+filenames)
             os.system('vv '+filenames) # to be changed by subprocess
-
-    # print nb found
-    if len(res) == 1:
-        print('Found 1 element')
-    else:
-        print('Found {} elements'.format(len(res)))
 
     if delete:
         ids = [i['id'] for i in res]

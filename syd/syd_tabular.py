@@ -97,9 +97,7 @@ def tabular2(db, table_name, line_format, elements):
     for h in format_headers:
         header += h+' '
 
-    header += '\n'
-    header += tabular_str(f, elements);
-    return header
+    return header, tabular_str(f, elements)
 
 # -----------------------------------------------------------------------------
 def get_field_value(field_name, mapping):
