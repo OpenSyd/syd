@@ -100,7 +100,7 @@ def syd_find(table_name, grep, db,
 
     # vv ?
     if vv:
-        filenames = ''
+        filenames = ''        
         for e in res:
             try:
                 # if element is an Image
@@ -109,13 +109,15 @@ def syd_find(table_name, grep, db,
             except:
                 try:
                     # if element is an DicomSerie
-                    filename = syd.get_dicom_serie_files(db, e)
-                    for f in filename:
-                        filenames = filenames + ' ' + syd.get_file_absolute_filename(db, f)
+                    files = syd.get_dicom_series_files(db, e)
+                    if len(files)>1:
+                        filenames += ' --sequence '
+                    for f in files:
+                        filenames += ' ' + syd.get_file_absolute_filename(db, f)
                 except:
                     filename = '' ## nothing
         if filenames != '':
-            print('vv '+filenames)
+            #print('vv '+filenames)
             os.system('vv '+filenames) # to be changed by subprocess
 
     # print nb found

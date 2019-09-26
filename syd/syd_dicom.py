@@ -509,7 +509,9 @@ def search_injection(db, ds, dicom_study, dicom_series):
     for ic in inj_candidates:
         if ic.date < dicom_date:
             if found:
-                tqdm.write('Several injections may be associated. Ignoring injection')
+                if ic.date > found.date:
+                    found = ic
+                    #tqdm.write('Several injections may be associated. Ignoring injection')
             else:
                 found = ic
 
@@ -569,3 +571,23 @@ def get_dicom_image_info(ds):
             img_spacing = '{}x{}'.format(spacing_x,spacing_y)
 
     return img_size, img_spacing
+
+
+# -----------------------------------------------------------------------------
+def get_dicom_series_files(db, dicom_series):
+    '''
+    Return the list of files associated with the dicom_serie
+    '''
+
+    # get all dicom files
+    dicom_files = syd.find(db['DicomFile'], dicom_series_id=dicom_series['id'])
+
+    # sort by instance_number
+    dicom_files = sorted(dicom_files, key=lambda kv: kv['instance_number'])
+
+    # get all associated id of the files
+    fids = [ df['file_id'] for df in dicom_files]
+
+    # find files
+    res = syd.find(db['File'], id=fids)
+    return res
