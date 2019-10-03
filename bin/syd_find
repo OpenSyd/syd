@@ -72,25 +72,20 @@ def syd_find(table_name, grep, db,
         print(s)
         exit()
 
-    # print
+    # get or create the format from the name
     if line_format == '':
         line_format = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
-    #header, s = syd.tabular2(db, line_format, elements)
 
-    ###### START
-    fields = syd.get_all_subfield_info(db, line_format)
-    elements = syd.add_subfields_to_elements(db, elements, fields)
-
-    for sub in fields:
-        line_format = line_format.replace(sub.initial_field_name, sub.field_format_name)
+    # complete the elements with sub elements
+    line_format = syd.add_subfields_to_elements(db, table_name, elements, line_format)
 
     # header: list of fields
     format_headers = re.findall(r'{(.*?)[:\}]', line_format)
     header = ''
     for h in format_headers:
         header += h+' '
-    ###### END 
 
+    # format to str
     s = syd.tabular_str(line_format, elements)
 
     # grep FIXME ---> SHOULD BE in elements values not s ?
