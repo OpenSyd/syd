@@ -43,7 +43,7 @@ def syd_find(table_name, grep, db,
     '''
     FIXME
 
-    grep: display results that match all (AND) words given. For OR, use something like "A|B"
+    grep: filter results. Display results that match all (AND) words given. For OR, use something like "A|B"
     '''
 
     # open the db
@@ -55,9 +55,6 @@ def syd_find(table_name, grep, db,
     if not tname:
         print('Table {} does not exist. Tables: {}'.format(table_name, db.tables))
         exit(0)
-    # not sure if worth to warn user 
-    #if tname != table_name:
-    #    syd.warning(f'Warning: table {table_name} does not exist, we guess it is table {tname}')
     table_name = tname
     table = db[table_name]
 
@@ -78,9 +75,25 @@ def syd_find(table_name, grep, db,
     # print
     if line_format == '':
         line_format = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
-    header, s = syd.tabular2(db, table_name, line_format, elements)
+    #header, s = syd.tabular2(db, line_format, elements)
 
-    # grep
+    ###### START
+    fields = syd.get_all_subfield_info(db, line_format)
+    elements = syd.add_subfields_to_elements(db, elements, fields)
+
+    for sub in fields:
+        line_format = line_format.replace(sub.initial_field_name, sub.field_format_name)
+
+    # header: list of fields
+    format_headers = re.findall(r'{(.*?)[:\}]', line_format)
+    header = ''
+    for h in format_headers:
+        header += h+' '
+    ###### END 
+
+    s = syd.tabular_str(line_format, elements)
+
+    # grep FIXME ---> SHOULD BE in elements values not s ?
     res = ''
     nb = 0
     for e in s.splitlines():

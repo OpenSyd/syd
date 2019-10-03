@@ -40,7 +40,7 @@ def tabular_get_line_format(db, table_name, format_name, element):
     return df
 
 # -----------------------------------------------------------------------------
-def get_sub_field_info(db, field_name):
+def get_subfield_info(db, field_name):
     fields = field_name.split('.') #re.findall(r'(\w)\.(\w)', field_name)
     a = Box()
     a.table_names = []
@@ -76,16 +76,118 @@ def get_sub_element(db, element, tables, field_id_names):
 
 
 # -----------------------------------------------------------------------------
-def tabular2(db, table_name, line_format, elements):
+def get_sub_elements(db, elements, format_info, subelements):
+
+    print(len(elements), len(subelements),
+          format_info.field_format_name,      # study->patient->name
+          format_info.tables,                 # DicomStudy Patient
+          format_info.field_id_names,         # study_id patient_id
+          format_info.field_name)             # name
+
+    print(len(subelements))
+
+    # get al subelements
+    current_table = format_info.tables[0]
+    current_field_id_name = format_info.field_id_names[0]
+    ids = [ elem[current_field_id_name] for elem in subelements] ## repetition, unique ? FIXME
+    print('ids in subelements', len(subelements), ids)
+    new_subelements = syd.find(current_table, id=ids)
+    print('new subelements', len(new_subelements))
+
+    if len(format_info.tables) == 1:
+        print('TABLE1')
+
+        # correspondance current_id -> new_id   (study_id -> patient_id)
+        subelements_map = {}                            ## map previous id to last id
+        for s in new_subelements:
+            subelements_map[s.id] = s[format_info.field_name]
+        print('map', subelements_map)
+
+        for elem in elements:
+            # print('av',elem)
+            index = elem[format_info.field_format_name]
+            if index: # because can be None
+                # print(index)
+                elem[format_info.field_format_name] = subelements_map[index]
+                # print('ap', elem)
+        return elements
+
+    # correspondance current_id -> new_id   (study_id -> patient_id)
+    subelements_map = {}                            ## map previous id to last id
+    for s in new_subelements:
+        subelements_map[s.id] = s[format_info.field_id_names[1]]
+    print('map', subelements_map)
+
+    # change the id
+    print('LOOP')
+    for elem in elements:
+        index = elem[format_info.field_format_name]
+        if index:
+            # print('index', index, elem)
+            elem[format_info.field_format_name] = subelements_map[index]
+            # print(elem)
+
+    # recurse removing the first
+    format_info.tables = format_info.tables[1:]
+    format_info.field_id_names = format_info.field_id_names[1:]
+    return get_sub_elements(db, elements, format_info, new_subelements)
+
+
+# -----------------------------------------------------------------------------
+def get_all_subfield_info(db, line_format):
+    subelements = re.findall(r'{(\w+)\.(.*?)[:\}]', line_format)
+    subfields = []
+    for e in subelements:
+        a = get_subfield_info(db, e[0]+'.'+e[1])
+        subfields.append(a)
+    return subfields
+
+# -----------------------------------------------------------------------------
+def add_subfields_to_elements(db, elements, fields_info):
+
+    for sub in fields_info:
+        ## --> FIXME THIS IS VERY SLOW
+        print('sub', sub)
+        for elem in elements:
+            elem[sub.field_format_name] = elem[sub.field_id_names[0]] ## FIRST TIME ONLY
+        se = get_sub_elements(db, elements, sub, elements)
+        print(len(se))
+        print('-----------------------------------------------------------')
+
+    return elements
+
+# -----------------------------------------------------------------------------
+def add_subfields_to_elements_old(db, elements, fields_info):
+
+    for elem in elements:
+        for sub in fields_info:
+        ## --> FIXME THIS IS VERY SLOW
+            se = get_sub_element(db, elem, sub.tables, sub.field_id_names)
+            if se and sub.field_name in se:
+                elem[sub.field_format_name] = se[sub.field_name]
+
+
+    ### alternative ?
+    # for a given fields e.g. injection.patient.name
+    # FIRST : TIMING
+    #
+    ####
+
+    return elements
+
+# -----------------------------------------------------------------------------
+def tabular2(db, line_format, elements):
     f = line_format
     subelements = re.findall(r'{(\w+)\.(.*?)[:\}]', f)
     subfields = []
     for e in subelements:
-        a = get_sub_field_info(db, e[0]+'.'+e[1])
+        a = get_subfield_info(db, e[0]+'.'+e[1])
         subfields.append(a)
 
     for sub in subfields:
         f = f.replace(sub.initial_field_name, sub.field_format_name)
+
+        ## --> FIXME THIS IS VERY SLOW
         for elem in elements:
             se = get_sub_element(db, elem, sub.tables, sub.field_id_names)
             if se and sub.field_name in se:
