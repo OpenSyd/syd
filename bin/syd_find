@@ -35,11 +35,12 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--vv/--no-vv', default=False,
               help='Try to open in VV (only work for Image and DicomSerie)')
 
-@click.option('--update_image_info/--no-update_image_info', default=False,
-              help='DEBUG: update the image info for DicomSerie')
+@click.option('--add_tag', '--at', default='', multiple=True,
+              help='Add a tag to all found elements')
+
 def syd_find(table_name, grep, db,
              line_format_name, print_line_format_name, line_format,
-             delete, short, id, vv, update_image_info):
+             delete, short, id, vv, add_tag):
     '''
     FIXME
 
@@ -64,6 +65,8 @@ def syd_find(table_name, grep, db,
     else:
         elements = syd.find(table, id=id)
 
+    init_nb = len(elements)
+
     # only ids ? 
     if short:
         s=''
@@ -85,46 +88,30 @@ def syd_find(table_name, grep, db,
     for h in format_headers:
         header += h+' '
 
-    # format to str
-    s = syd.tabular_str(line_format, elements)
-
-    # grep FIXME ---> SHOULD BE in elements values not s ?
-    res = ''
-    nb = 0
-    for e in s.splitlines():
-        found=True
-        for g in grep:
-            if not re.search(g, e):
-                found=False
-                break
-        if found:
-            res += e+'\n'
-            nb += 1
-
-    if nb == 0:
-        return
-    res = res[:-1] # remove last break line
+    # grep and get str
+    elements, s = syd.grep_elements(elements, line_format, grep)
 
     # print everything
     print(header)
-    print(res)
+    print(s)
 
     # print nb found
+    nb = len(elements)
     if nb == 1:
-        if nb != len(elements):
-            print(f'Found 1/{len(elements)} element')
+        if nb != init_nb:
+            print(f'Found 1/{init_nb} element')
         else:
             print(f'Found 1 element')
     else:
-        if nb != len(elements):
-            print(f'Found {nb}/{len(elements)} elements')
+        if nb != init_nb:
+            print(f'Found {nb}/{init_nb} elements')
         else:
             print(f'Found {nb} elements')
 
     # vv ?
     if vv:
         filenames = ''        
-        for e in res:
+        for e in elements:
             try:
                 # if element is an Image
                 filename = syd.get_image_filename(db, e)
@@ -144,7 +131,7 @@ def syd_find(table_name, grep, db,
             os.system('vv '+filenames) # to be changed by subprocess
 
     if delete:
-        ids = [i['id'] for i in res]
+        ids = [i['id'] for i in elements]
         syd.delete(db[table_name], ids)
         print('Deleted',table_name, ids)
 

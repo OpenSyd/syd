@@ -35,7 +35,7 @@ def tabular_get_line_format(db, table_name, format_name, element):
         df = ''
         for k in element:
             df += '{'+str(k)+'} '
-        df += '\n'
+        #df += '\n'
 
     return df
 
@@ -214,7 +214,7 @@ def tabular_str(format_line, elements):
     s = ''
     for e in elements:
         #s += format_line.format_map(d)
-        s += str_format_map(format_line, e)
+        s += str_format_map(format_line, e)+'\n'
 
     # remove last element (final break line)
     s = s[:-1]
