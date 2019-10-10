@@ -35,12 +35,12 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--vv/--no-vv', default=False,
               help='Try to open in VV (only work for Image and DicomSerie)')
 
-@click.option('--add_tag', '--at', default='', multiple=True,
-              help='Add a tag to all found elements')
+@click.option('--labels', '-l', default='', multiple=True,
+              help='Add a label to all found elements')
 
 def syd_find(table_name, grep, db,
              line_format_name, print_line_format_name, line_format,
-             delete, short, id, vv, add_tag):
+             delete, short, id, vv, labels):
     '''
     FIXME
 
@@ -65,6 +65,9 @@ def syd_find(table_name, grep, db,
     else:
         elements = syd.find(table, id=id)
 
+    if len(elements) == 0:
+        exit()
+        
     init_nb = len(elements)
 
     # only ids ? 
@@ -79,7 +82,7 @@ def syd_find(table_name, grep, db,
     if line_format == '':
         line_format = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
 
-    # complete the elements with sub elements
+    # complete the elements with sub elements (e.g. patient->name)
     line_format = syd.add_subfields_to_elements(db, table_name, elements, line_format)
 
     # header: list of fields
@@ -90,6 +93,16 @@ def syd_find(table_name, grep, db,
 
     # grep and get str
     elements, s = syd.grep_elements(elements, line_format, grep)
+
+    # Add labels to elements, update and redo formating
+    if len(labels) > 0:
+        ids = [e.id for e in elements]
+        elements = syd.find(table, id=ids)
+        syd.add_labels(elements, labels)
+        syd.update(db[table_name], elements)
+        line_format = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
+        line_format = syd.add_subfields_to_elements(db, table_name, elements, line_format)
+        elements, s = syd.grep_elements(elements, line_format, grep)
 
     # print everything
     print(header)

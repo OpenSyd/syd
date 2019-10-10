@@ -16,7 +16,7 @@ from .syd_image import *
 
 # methods, helpers
 from .syd_faf_calibration import *
-from .syd_tag import *
+from .syd_label import *
 from .syd_stitch_image import *
 
 # itk algorithms

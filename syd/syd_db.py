@@ -229,6 +229,20 @@ def update_one(table, element):
 
 
 # -----------------------------------------------------------------------------
+def update(table, elements):
+    '''
+    Update all elements according to the 'id'
+    '''
+
+    try:
+        for e in elements:
+            table.update(e, ['id'])
+    except:
+        s = 'Error while updating {}, id not found ?'.format(elements)
+        raise_except(s)
+
+
+# -----------------------------------------------------------------------------
 def find_one(table, **kwargs):
     '''
     Retrieve one element from query
