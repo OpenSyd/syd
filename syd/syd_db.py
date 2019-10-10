@@ -7,6 +7,7 @@ import os
 import sys
 import datetime
 from box import Box
+from box import BoxList
 
 from .syd_patient import *
 from .syd_injection import *
@@ -137,7 +138,7 @@ def insert(table, elements):
     if not isinstance(elements, list):
         s = "Error, elements is not an array. Maybe use 'syd.insert_one'"
         raise_except(s)
-    
+
     try:
         with table.db as tx:
             for p in elements:
@@ -235,6 +236,7 @@ def find_one(table, **kwargs):
     elem = table.find_one(**kwargs)
     if not elem:
         return None
+    elem['table_name'] = table.name
     return Box(elem)
 
 # -----------------------------------------------------------------------------
@@ -245,7 +247,9 @@ def find(table, **kwargs):
     elem = table.find(**kwargs)
     elements = []
     for e in elem:
+        e['table_name'] = table.name
         elements.append(Box(e))
+
     return elements
 
 # -----------------------------------------------------------------------------
@@ -256,7 +260,9 @@ def find_all(table):
     elem = table.all()
     elements = []
     for e in elem:
+        e['table_name'] = table.name
         elements.append(Box(e))
+
     return elements
 
 
@@ -308,4 +314,3 @@ def grep_elements(elements, format_line, grep):
     if len(s)>0:
         s = s[:-1] # remove last break line
     return elements, s
-

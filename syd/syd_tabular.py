@@ -35,7 +35,6 @@ def tabular_get_line_format(db, table_name, format_name, element):
         df = ''
         for k in element:
             df += '{'+str(k)+'} '
-        #df += '\n'
 
     return df
 
