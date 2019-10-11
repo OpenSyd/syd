@@ -41,12 +41,30 @@ def add_labels(elements, labels):
 
 
 # -----------------------------------------------------------------------------
-def rm_label(element, label):
-    if label == None or label =='':
+def rm_labels(elements, labels):
+
+    # check if elements is a list
+    if not isinstance(elements, collections.Sequence):
+            return rm_labels([elements], labels)
+
+    # convert labels into array if it is not
+    if type(labels) == type('str'):
+        labels = labels.split(' ')
+
+    if len(labels) == 0:
         return
 
-    # add label
-    if 'labels' in element:
-        element['labels'] = element['labels'].replace(label, "")
-    else:
-        return
+    for t in labels:
+        t = t.strip() # remove space
+        for e in elements:
+            if 'labels' in e:
+                e.labels = e.labels.replace(t, '')
+            else:
+                e.labels = t
+
+# -----------------------------------------------------------------------------
+def clean_labels(elements):
+
+    for e in elements:
+        if 'labels' in e:
+            e.labels = ''

@@ -20,9 +20,6 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--line_format', '-p', default='',
               help='Explicit print format')
 
-@click.option('--print_line_format_name',
-              help='Print all the available format names')
-
 @click.option('--delete/--no-delete', '-d', default=False,
               help='Delete found elements')
 
@@ -38,9 +35,15 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--labels', '-l', default='', multiple=True,
               help='Add a label to all found elements')
 
+@click.option('--rm_labels', '-rl', default='', multiple=True,
+              help='Remove a label to all found elements')
+
+@click.option('--clean_labels/--no-clean',
+              help='Remove all labels to all found elements')
+
 def syd_find(table_name, grep, db,
-             line_format_name, print_line_format_name, line_format,
-             delete, short, id, vv, labels):
+             line_format_name, line_format,
+             delete, short, id, vv, labels, rm_labels, clean_labels):
     '''
     FIXME
 
@@ -95,15 +98,25 @@ def syd_find(table_name, grep, db,
     elements, s = syd.grep_elements(elements, line_format, grep)
 
     # Add labels to elements, update and redo formating
-    if len(labels) > 0:
+    if len(labels) > 0 or len(rm_labels)>0:
         ids = [e.id for e in elements]
         elements = syd.find(table, id=ids)
         syd.add_labels(elements, labels)
+        syd.rm_labels(elements, rm_labels)
         syd.update(db[table_name], elements)
         line_format = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
         line_format = syd.add_subfields_to_elements(db, table_name, elements, line_format)
         elements, s = syd.grep_elements(elements, line_format, grep)
 
+    if clean_labels:
+        ids = [e.id for e in elements]
+        elements = syd.find(table, id=ids)
+        syd.clean_labels(elements)
+        syd.update(db[table_name], elements)
+        line_format = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
+        line_format = syd.add_subfields_to_elements(db, table_name, elements, line_format)
+        elements, s = syd.grep_elements(elements, line_format, grep)
+        
     # print everything
     print(header)
     print(s)
