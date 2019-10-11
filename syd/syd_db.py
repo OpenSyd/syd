@@ -298,39 +298,6 @@ def find_join_one(element, table, field_id):
 
 
 # -----------------------------------------------------------------------------
-def grep_elements(elements, format_line, grep):
-    '''
-    Filter elements. Only keep the ones that match grep
-    '''
-
-    lines =  [ syd.str_format_map(format_line, elem) for elem in elements]
-
-    s = ''
-    if len(grep) == 0:
-        for l in lines:
-            s += l+'\n'
-        if len(s)>0:
-            s = s[:-1] # remove last break line
-        return elements, s
-
-    for g in grep:
-        print('grep=', g)
-        kelements = []
-        klines = []
-        for e,l in zip(elements, lines):
-            if re.search(g, l):
-                kelements.append(e)
-                klines.append(l)
-        elements = kelements
-        lines = klines
-
-    for l in lines:
-        s += l+'\n'
-    if len(s)>0:
-        s = s[:-1] # remove last break line
-    return elements, s
-
-# -----------------------------------------------------------------------------
 def update_nested(db, elements):
     '''
     TODO

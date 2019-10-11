@@ -26,6 +26,9 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--short/--no-short', '-s', default=False,
               help='If true, only display results id (for piped commands)')
 
+@click.option('--no_ignore', is_flag=True,
+              help='If set, remove %ignore in grep ')
+
 @click.option('--id', '-i', multiple=True,
               help='Only display elements with given id (maybe multiple)')
 
@@ -42,13 +45,15 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
               help='Remove all labels to all found elements')
 
 def syd_find(table_name, grep, db,
-             line_format_name, line_format,
+             line_format_name, line_format, no_ignore,
              delete, short, id, vv,
              labels, rm_labels, clean_labels):
     '''
     Find elements in table.
 
-    grep: filter results. Display results that match all (AND) words given. For OR, use something like "A|B"
+    grep: filter results. Display results that match all (AND) words given. For OR, use something like "A|B". To use negative grep (vgrep), match elements that do not contains a given words, use %. For example, syd_find patients %toto will filter patient that do not contain the word 'toto'.
+
+    By default: the word '%ignore' is added to grep. Use --no-ignore to bypass.
 
     labels: add or rm labels to all founded elements. Labels can be a list of words separated by space.
 
@@ -99,6 +104,9 @@ def syd_find(table_name, grep, db,
         header += h+' '
 
     # grep and get str
+    if not no_ignore:
+        grep = list(grep)
+        grep.append('%ignore')
     elements, s = syd.grep_elements(elements, lf, grep)
 
     # Add labels to elements, update and redo formating
@@ -134,10 +142,7 @@ def syd_find(table_name, grep, db,
         else:
             print(f'Found 1 element')
     else:
-        if nb != init_nb:
-            print(f'Found {nb}/{init_nb} elements')
-        else:
-            print(f'Found {nb} elements')
+        print(f'Found {nb}/{init_nb} elements')
 
     # vv ?
     if vv:

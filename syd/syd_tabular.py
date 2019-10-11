@@ -218,3 +218,47 @@ def tabular_str(format_line, elements):
     # remove last element (final break line)
     s = s[:-1]
     return s
+
+# -----------------------------------------------------------------------------
+def grep_elements(elements, format_line, grep):
+    '''
+    Filter elements. Only keep the ones that match grep
+    '''
+
+    lines =  [ syd.str_format_map(format_line, elem) for elem in elements]
+
+    s = ''
+    if len(grep) == 0:
+        for l in lines:
+            s += l+'\n'
+        if len(s)>0:
+            s = s[:-1] # remove last break line
+        return elements, s
+
+    for g in grep:
+        print(g)
+        vgrep = False
+        kelements = []
+        klines = []
+        if g[0] == '%':
+            vgrep = True
+            g = g[1:]
+            print(g)
+        for e,l in zip(elements, lines):
+            if re.search(g, l):
+                if not vgrep:
+                    kelements.append(e)
+                    klines.append(l)
+            else:
+                if vgrep:
+                    kelements.append(e)
+                    klines.append(l)
+        elements = kelements
+        lines = klines
+
+    for l in lines:
+        s += l+'\n'
+    if len(s)>0:
+        s = s[:-1] # remove last break line
+    return elements, s
+
