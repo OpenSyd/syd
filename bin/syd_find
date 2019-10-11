@@ -38,16 +38,20 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--rm_labels', '-rl', default='', multiple=True,
               help='Remove a label to all found elements')
 
-@click.option('--clean_labels/--no-clean',
+@click.option('--clean_labels', is_flag=True,
               help='Remove all labels to all found elements')
 
 def syd_find(table_name, grep, db,
              line_format_name, line_format,
-             delete, short, id, vv, labels, rm_labels, clean_labels):
+             delete, short, id, vv,
+             labels, rm_labels, clean_labels):
     '''
-    FIXME
+    Find elements in table.
 
     grep: filter results. Display results that match all (AND) words given. For OR, use something like "A|B"
+
+    labels: add or rm labels to all founded elements. Labels can be a list of words separated by space.
+
     '''
 
     # open the db
@@ -70,10 +74,10 @@ def syd_find(table_name, grep, db,
 
     if len(elements) == 0:
         exit()
-        
+
     init_nb = len(elements)
 
-    # only ids ? 
+    # only ids ?
     if short:
         s=''
         for e in elements:
@@ -86,16 +90,16 @@ def syd_find(table_name, grep, db,
         line_format = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
 
     # complete the elements with sub elements (e.g. patient->name)
-    line_format = syd.add_subfields_to_elements(db, table_name, elements, line_format)
+    lf = syd.add_subfields_to_elements(db, table_name, elements, line_format)
 
     # header: list of fields
-    format_headers = re.findall(r'{(.*?)[:\}]', line_format)
+    format_headers = re.findall(r'{(.*?)[:\}]', lf)
     header = ''
     for h in format_headers:
         header += h+' '
 
     # grep and get str
-    elements, s = syd.grep_elements(elements, line_format, grep)
+    elements, s = syd.grep_elements(elements, lf, grep)
 
     # Add labels to elements, update and redo formating
     if len(labels) > 0 or len(rm_labels)>0:
@@ -105,18 +109,19 @@ def syd_find(table_name, grep, db,
         syd.rm_labels(elements, rm_labels)
         syd.update(db[table_name], elements)
         line_format = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
-        line_format = syd.add_subfields_to_elements(db, table_name, elements, line_format)
-        elements, s = syd.grep_elements(elements, line_format, grep)
+        lf = syd.add_subfields_to_elements(db, table_name, elements, line_format)
+        elements, s = syd.grep_elements(elements, lf, grep)
 
+    # remove all labels
     if clean_labels:
         ids = [e.id for e in elements]
         elements = syd.find(table, id=ids)
         syd.clean_labels(elements)
         syd.update(db[table_name], elements)
         line_format = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
-        line_format = syd.add_subfields_to_elements(db, table_name, elements, line_format)
-        elements, s = syd.grep_elements(elements, line_format, grep)
-        
+        lf = syd.add_subfields_to_elements(db, table_name, elements, line_format)
+        elements, s = syd.grep_elements(elements, lf, grep)
+
     # print everything
     print(header)
     print(s)
@@ -136,7 +141,7 @@ def syd_find(table_name, grep, db,
 
     # vv ?
     if vv:
-        filenames = ''        
+        filenames = ''
         for e in elements:
             try:
                 # if element is an Image
@@ -153,7 +158,6 @@ def syd_find(table_name, grep, db,
                 except:
                     filename = '' ## nothing
         if filenames != '':
-            #print('vv '+filenames)
             os.system('vv '+filenames) # to be changed by subprocess
 
     if delete:

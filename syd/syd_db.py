@@ -314,6 +314,7 @@ def grep_elements(elements, format_line, grep):
         return elements, s
 
     for g in grep:
+        print('grep=', g)
         kelements = []
         klines = []
         for e,l in zip(elements, lines):
@@ -328,3 +329,39 @@ def grep_elements(elements, format_line, grep):
     if len(s)>0:
         s = s[:-1] # remove last break line
     return elements, s
+
+# -----------------------------------------------------------------------------
+def update_nested(db, elements):
+    '''
+    TODO
+    '''
+
+    for e in elements:
+        update_nested_one(db, e)
+    
+   
+# -----------------------------------------------------------------------------
+def update_nested_one(db, element):
+    '''
+    TODO
+    '''
+
+    m = {}
+    for k in element:
+        if not k[-3:] == '_id':
+            continue
+
+        field = k[:-3]
+        table = syd.guess_table_name(db, field)
+        if table == None: # may append for xample with dicom_id
+            continue
+        eid = element[k]
+        nested_elem = syd.find_one(db[table], id=eid)
+        if nested_elem == None:
+            continue
+        m[field] = nested_elem
+
+    for f in m:
+        update_nested_one(db, m[f])
+        element[f] = m[f]
+
