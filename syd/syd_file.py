@@ -51,8 +51,8 @@ def get_file_absolute_filename(db, fi):
     '''
     Return the absolute file path of the given file
     '''
-    p = os.path.join(db.absolute_data_folder, fi['folder'])
-    p = os.path.join(p, fi['filename'])
+    p = os.path.join(db.absolute_data_folder, fi.folder)
+    p = os.path.join(p, fi.filename)
     return p
 
 

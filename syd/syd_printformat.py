@@ -40,11 +40,11 @@ def insert_default_printformat_elements(db):
         },
         
         { 'name': 'default', 'table_name': 'DicomSeries',
-          'format': '{id:4} {dicom_study.patient.name: <10} {injection.radionuclide.name} {injection.activity_in_MBq} {modality} {acquisition_date:%Y-%m-%d-%H:%M} {image_size} {image_spacing} / {series_description} / {dicom_study.study_description} / {dicom_study.study_name} / {dataset_name}  {labels}'
+          'format': '{id:4} {dicom_study.patient.name: <10} {injection.radionuclide.name} {time_from_inj} {injection.cycle} {injection.activity_in_MBq} {modality} {acquisition_date:%Y-%m-%d-%H:%M} {image_size} {image_spacing} / {series_description} / {dicom_study.study_description} / {dicom_study.study_name} / {dataset_name} / {labels}'
         },
         
         { 'name': 'file', 'table_name': 'DicomSeries',
-          'format': '{id:4} {absolute_filename}  {labels} '
+          'format': '{id:4} {dicom_study.patient.name: <10} {abs_filename} {labels} '
         },
         
         { 'name': 'default', 'table_name': 'DicomFile',
@@ -56,11 +56,11 @@ def insert_default_printformat_elements(db):
         },
 
         { 'name': 'file', 'table_name': 'Image',
-          'format': '{id:4} {absolute_filename}  {labels}'
+          'format': '{id:4} {abs_filename}  {labels}'
         },
 
         { 'name': 'default', 'table_name': 'Image',
-          'format': '{id:4} {patient.name:<5} {modality} {acquisition_date:%Y-%m-%d-%H:%M}  {injection.radionuclide.name:5} {injection.date:%Y-%m-%d-%H:%M}  {dicom_series_id} {pixel_type} {pixel_unit} {dicom_series.series_description} / {dicom_series.dicom_study.study_description} / {dicom_series.dicom_study.study_name} / {dicom_series.dataset_name}  {labels} '
+          'format': '{id:4} {patient.name:<5} {modality} {acquisition_date:%Y-%m-%d-%H:%M}  {time_from_inj} {injection.radionuclide.name:5} {injection.date:%Y-%m-%d-%H:%M}  {dicom_series_id} {pixel_type} {pixel_unit} {dicom_series.series_description} / {dicom_series.dicom_study.study_description} / {dicom_series.dicom_study.study_name} / {dicom_series.dataset_name}  {labels} '
         },
 
         { 'name': 'file', 'table_name': 'PrintFormat',

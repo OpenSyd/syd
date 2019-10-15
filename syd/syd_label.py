@@ -26,19 +26,21 @@ def add_labels(elements, labels):
     if len(labels) == 0:
         return
 
+    all_labels = ''
     for t in labels:
         t = t.strip() # remove space
-        for e in elements:
-            if 'labels' in e:
-                e.labels = e.labels+" "+t
-            else:
-                e.labels = t
+        all_labels = all_labels+' '+t
+
+    for e in elements:
+        if 'labels' in e and e.labels != None :
+            e.labels = e.labels+" "+all_labels
+        else:
+            e.labels = t
 
     # remove duplicate
     for e in elements:
         l = set(e.labels.split(' '))
         e.labels = ' '.join(l)
-
 
 # -----------------------------------------------------------------------------
 def rm_labels(elements, labels):

@@ -29,7 +29,7 @@ def syd_insert_image_from_dicom(dicomseries, tag, db):
     db = syd.open_db(db_filename)
 
     # get the dicom_series
-    dicom_series = syd.find(db['DicomSerie'], id=dicomseries)
+    dicom_series = syd.find(db['DicomSeries'], id=dicomseries)
 
     # look and insert dicom
     for dicom_serie in dicom_series:

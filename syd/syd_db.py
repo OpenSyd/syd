@@ -235,8 +235,9 @@ def update(table, elements):
     '''
 
     try:
-        for e in elements:
-            table.update(e, ['id'])
+        with table.db as tx:
+            for e in elements:
+                tx[table.name].update(e, ['id'])
     except:
         s = 'Error while updating {}, id not found ?'.format(elements)
         raise_except(s)
@@ -332,3 +333,12 @@ def update_nested_one(db, element):
         update_nested_one(db, m[f])
         element[f] = m[f]
 
+
+# -----------------------------------------------------------------------------
+def find_grep(db, table_name, grep, line_format_name):
+    '''
+    Helper fct
+    '''
+
+    print('here')
+        

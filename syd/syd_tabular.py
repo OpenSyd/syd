@@ -39,7 +39,7 @@ def tabular_get_line_format(db, table_name, format_name, element):
     return df
 
 # -----------------------------------------------------------------------------
-def get_subfield_info(db, field_name):
+def get_nested_info(db, field_name):
     fields = field_name.split('.') #re.findall(r'(\w)\.(\w)', field_name)
     a = Box()
     a.table_names = []
@@ -119,19 +119,19 @@ def get_sub_elements(db, elements, format_info, subelements):
 
 
 # -----------------------------------------------------------------------------
-def get_all_subfield_info(db, line_format):
+def get_all_nested_info(db, line_format):
     subelements = re.findall(r'{(\w+)\.(.*?)[:\}]', line_format)
-    subfields = []
+    nesteds = []
     for e in subelements:
-        a = get_subfield_info(db, e[0]+'.'+e[1])
-        subfields.append(a)
-    return subfields
+        a = get_nested_info(db, e[0]+'.'+e[1])
+        nesteds.append(a)
+    return nesteds
 
 # -----------------------------------------------------------------------------
-def add_subfields_to_elements(db, tables_name, elements, line_format):
+def tabular_add_nested_elements(db, table_name, elements, line_format):
 
-    # get information about all subfields (such as patient->name
-    fields_info = syd.get_all_subfield_info(db, line_format)
+    # get information about all nesteds (such as patient->name
+    fields_info = syd.get_all_nested_info(db, line_format)
 
     for sub in fields_info:
         for elem in elements:
@@ -145,16 +145,67 @@ def add_subfields_to_elements(db, tables_name, elements, line_format):
 
 
 # -----------------------------------------------------------------------------
-def add_subfields_to_elements_old(db, elements, fields_info):
+def tabular_add_special_fct(db, table_name, elements, line_format):
 
-    for elem in elements:
-        for sub in fields_info:
-        ## --> FIXME THIS IS VERY SLOW
-            se = get_sub_element(db, elem, sub.tables, sub.field_id_names)
-            if se and sub.field_name in se:
-                elem[sub.field_format_name] = se[sub.field_name]
+    subelements = re.findall(r'{(.*?)[:\}]', line_format)
 
-    return elements
+    for sub in subelements:
+        if sub == 'abs_filename':
+            tabular_add_abs_filename(db, table_name, elements)
+        if sub == 'time_from_inj':
+            tabular_add_time_from_inj(db, table_name, elements)
+
+
+# -----------------------------------------------------------------------------
+def tabular_add_abs_filename(db, table_name, elements):
+
+    # only for image, dicomstudy, dicomseries, dicomfile
+    # image  -> file_mhd_id file_raw_id => file
+    # study  -> NO
+    # series -> => dicomfile => file_id ; several so only first one or all ?
+
+    if table_name == 'DicomSeries':
+        ids = [ e.id for e in elements]
+        dicomfiles = syd.find(db['DicomFile'], dicom_series_id=ids)
+
+        ids = [ df.file_id for df in dicomfiles ]
+        files = syd.find(db['File'], id=ids)
+
+        map_df = {df.dicom_series_id:df for df in dicomfiles} # keep only one
+        map_f = {f.id:f for f in files} # keep only one
+
+        for e in elements:
+            df = map_df[e.id]
+            f = map_f[df.id]
+            e['abs_filename'] = syd.get_file_absolute_filename(db, f)
+
+    if table_name == 'Image':
+        ids = [ e.file_mhd_id for e in elements]
+        files = syd.find(db['File'], id=ids)
+        map_f = {f.id:f for f in files}
+
+        for e in elements:
+            f = map_f[e.file_mhd_id]
+            e['abs_filename'] = syd.get_file_absolute_filename(db, f)
+
+
+# -----------------------------------------------------------------------------
+def tabular_add_time_from_inj (db, table_name, elements):
+
+    if table_name != 'DicomSeries' and table_name != 'Image':
+        return
+
+    ids = [ e.injection_id for e in elements ]
+    injections = syd.find(db['Injection'], id=ids)
+    map_inj = {inj.id:inj for inj in injections} # keep only one    
+    for e in elements:
+        if not e.injection_id in map_inj:
+            continue
+        inj = map_inj[e.injection_id]
+        date1 = inj.date
+        date2 = e.acquisition_date
+        #print(date1, date2)
+        e.time_from_inj = date2-date1
 
 
 # -----------------------------------------------------------------------------
@@ -163,6 +214,7 @@ def get_field_value(field_name, mapping):
     http://ashwch.github.io/handling-missing-keys-in-str-format-map.html
     To handle missing field in tabular_str
     '''
+
     try:
         if '.' not in field_name:
             return mapping[field_name], True
@@ -236,14 +288,12 @@ def grep_elements(elements, format_line, grep):
         return elements, s
 
     for g in grep:
-        print(g)
         vgrep = False
         kelements = []
         klines = []
         if g[0] == '%':
             vgrep = True
             g = g[1:]
-            print(g)
         for e,l in zip(elements, lines):
             if re.search(g, l):
                 if not vgrep:
@@ -260,5 +310,5 @@ def grep_elements(elements, format_line, grep):
         s += l+'\n'
     if len(s)>0:
         s = s[:-1] # remove last break line
-    return elements, s
 
+    return elements, s

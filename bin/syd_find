@@ -3,8 +3,8 @@
 
 import syd
 import click
-import re
 import os
+import re
 
 # -----------------------------------------------------------------------------
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -95,7 +95,9 @@ def syd_find(table_name, grep, db,
         line_format = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
 
     # complete the elements with sub elements (e.g. patient->name)
-    lf = syd.add_subfields_to_elements(db, table_name, elements, line_format)
+    lf = syd.tabular_add_nested_elements(db, table_name, elements, line_format)
+
+    syd.tabular_add_special_fct(db, table_name, elements, line_format)
 
     # header: list of fields
     format_headers = re.findall(r'{(.*?)[:\}]', lf)
@@ -107,10 +109,11 @@ def syd_find(table_name, grep, db,
     if not no_ignore:
         grep = list(grep)
         grep.append('%ignore')
+
     elements, s = syd.grep_elements(elements, lf, grep)
 
     # Add labels to elements, update and redo formating
-    if len(labels) > 0 or len(rm_labels)>0:
+    if len(elements) > 0 and (len(labels) > 0 or len(rm_labels)>0):
         ids = [e.id for e in elements]
         elements = syd.find(table, id=ids)
         syd.add_labels(elements, labels)
@@ -121,7 +124,7 @@ def syd_find(table_name, grep, db,
         elements, s = syd.grep_elements(elements, lf, grep)
 
     # remove all labels
-    if clean_labels:
+    if len(elements) > 0 and clean_labels:
         ids = [e.id for e in elements]
         elements = syd.find(table, id=ids)
         syd.clean_labels(elements)

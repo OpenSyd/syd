@@ -54,13 +54,13 @@ def build_image_folder(db, image):
 
 
 # -----------------------------------------------------------------------------
-def insert_image_from_dicom(db, dicom_serie):
+def insert_image_from_dicom(db, dicom_series):
     '''
     Convert one Dicom image to MHD image
     '''
 
     # modality
-    modality = dicom_serie['modality']
+    modality = dicom_series['modality']
 
     # guess pixel unit FIXME --> check dicom tag ?
     pixel_unit = 'undefined'
@@ -72,15 +72,15 @@ def insert_image_from_dicom(db, dicom_serie):
         pixel_unit = 'MBq/mL'
 
     # get dicom files
-    files = syd.get_dicom_serie_files(db, dicom_serie)
+    files = syd.get_dicom_series_files(db, dicom_series)
     if len(files) == 0:
         s = 'Error, no file associated with this dicom serie'
         raise_except(s)
 
     # get folder
-    folder = dicom_serie['folder']
+    folder = dicom_series['folder']
     folder = os.path.join(db.absolute_data_folder, folder)
-    suid = dicom_serie['series_uid']
+    suid = dicom_series['series_uid']
 
     # read dicom image
     itk_image = None
@@ -108,7 +108,6 @@ def insert_image_from_dicom(db, dicom_serie):
         # print('itk_image', itk_image)
         # exit(0)
 
-
     else:
         filename = get_file_absolute_filename(db, files[0])
         itk_image = sitk.ReadImage(filename)
@@ -128,20 +127,22 @@ def insert_image_from_dicom(db, dicom_serie):
         try:
             itk_image = sitk.Cast(itk_image, sitk.sitkFloat32)
         except:
-            s = 'Cannot cast ... ignoring image '+filename
+            s = 'Cannot cast image. Ignoring '+str(dicom_series)
             warning(s)
             return None
 
     # create Image
+    syd.update_nested_one(db, dicom_series)
     img = {
-        'patient_id': dicom_serie['patient_id'],
-        'injection_id': dicom_serie['injection_id'],
-        'dicom_serie_id': dicom_serie['id'],
+        'patient_id': dicom_series.dicom_study.patient.id,
+        'injection_id': dicom_series.injection.id,
+        'dicom_series_id': dicom_series.id,
         'pixel_type': pixel_type,
         'pixel_unit': pixel_unit,
-        'frame_of_reference_uid': dicom_serie['frame_of_reference_uid'],
+        'frame_of_reference_uid': dicom_series.frame_of_reference_uid,
         'modality': modality,
-        'acquisition_date': dicom_serie['acquisition_date']
+        'acquisition_date': dicom_series.acquisition_date,
+        'labels': dicom_series.labels
     }
 
     # insert the image in the db
