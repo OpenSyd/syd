@@ -44,9 +44,12 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--clean_labels', is_flag=True,
               help='Remove all labels to all found elements')
 
+@click.option('--sort', default='',
+              help="Sorting key, for example 'acquisition_date'")
+
 def syd_find(table_name, grep, db,
              line_format_name, line_format, no_ignore,
-             delete, short, id, vv,
+             delete, short, id, vv, sort,
              labels, rm_labels, clean_labels):
     '''
     Find elements in table.
@@ -92,7 +95,7 @@ def syd_find(table_name, grep, db,
 
     # get or create the format from the name
     if line_format == '':
-        line_format = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
+        line_format, sorting_key = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
 
     # complete the elements with sub elements (e.g. patient->name)
     lf = syd.tabular_add_nested_elements(db, table_name, elements, line_format)
@@ -110,7 +113,13 @@ def syd_find(table_name, grep, db,
         grep = list(grep)
         grep.append('%ignore')
 
+    ##### test sort
+    if (sort):
+        sorting_key = sort
+    if sorting_key != None:
+        elements = syd.sort_elements(elements, sorting_key)
     elements, s = syd.grep_elements(elements, lf, grep)
+
 
     # Add labels to elements, update and redo formating
     if len(elements) > 0 and (len(labels) > 0 or len(rm_labels)>0):

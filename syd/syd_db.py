@@ -342,3 +342,14 @@ def find_grep(db, table_name, grep, line_format_name):
 
     print('here')
         
+
+# -----------------------------------------------------------------------------
+def sort_elements(elements, sorting_key):
+    try:
+        elements = sorted(elements, key = lambda i:i[sorting_key])
+    except:
+        s = "Cannot sort by '"+sorting_key+"'. Using default sort.";
+        syd.warning(s)
+
+    return elements
+        

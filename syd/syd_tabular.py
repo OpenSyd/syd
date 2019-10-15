@@ -22,9 +22,11 @@ def tabular_get_line_format(db, table_name, format_name, element):
     table_name = syd.guess_table_name(db, table_name)
     formats = syd.find(db['PrintFormat'], table_name=table_name)
     df = None
+    ff = None
     for f in formats:
         if f.name == format_name:
             df = f.format
+            ff = f
 
     if df == None and format_name != 'raw':
         s = "Cannot find the format '"+format_name+"' in table '"+table_name+"' using 'raw'"
@@ -36,7 +38,10 @@ def tabular_get_line_format(db, table_name, format_name, element):
         for k in element:
             df += '{'+str(k)+'} '
 
-    return df
+    sorting_key = ''
+    if 'sorting_key' in ff:
+        sorting_key = ff.sorting_key
+    return df, sorting_key
 
 # -----------------------------------------------------------------------------
 def get_nested_info(db, field_name):
