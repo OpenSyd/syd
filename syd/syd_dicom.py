@@ -135,28 +135,30 @@ def create_dicom_file_table(db):
     # define trigger
     con = db.engine.connect()
     cur = con.connection.cursor()
-    #  SELECT dicomfile_on_delete(OLD.file_id);
-    cur.execute("CREATE TRIGGER on_dicomfile_delete AFTER DELETE ON DicomFile BEGIN\
-    DELETE FROM File WHERE id=OLD.file_id;\
-    END;")
+    cur.execute('CREATE TRIGGER on__delete AFTER DELETE ON DicomFile\
+    BEGIN\
+    DELETE FROM File WHERE id = OLD.file_id;\
+    END;')
     con.close()
+
+    # if dicom trigger --> add this line before DELETE FROM File
+    #     SELECT on_dicomfile_delete(OLD.id);\
 
 
 # -----------------------------------------------------------------------------
-def dicomfile_on_delete(x):
-    # NOT USED (keep here for example)
-    print('on delete dicomfile', x)
+def on_dicomfile_delete(db, x):
+    # NOT really used. Kept here for example and display delete message
+    print('Delete DicomFile ', x)
 
 
 # -----------------------------------------------------------------------------
 def set_dicom_triggers(db):
     con = db.engine.connect()
-    # embed the db
     def t(x):
-        dicomfile_on_delete(db, x)
-    con.connection.create_function("dicomfile_on_delete", 1, t)
-    # Do nothing (no function needed)
-    # pass
+        on_dicomfile_delete(db, x)
+
+    con.connection.create_function("on_dicomfile_delete", 1, t)
+
 
 # -----------------------------------------------------------------------------
 def insert_dicom_from_folder(db, folder, patient):
@@ -178,9 +180,10 @@ def insert_dicom_from_folder(db, folder, patient):
         d = insert_dicom_from_file(db, f, patient)
         if d != {}:
             dicoms.append(d)
-        # update progress bar
+            # update progress bar
         pbar.update(1)
-    pbar.close()
+        pbar.close()
+
     print('Insertion of {} DICOM files.'.format(len(dicoms)))
 
 
@@ -236,32 +239,44 @@ def insert_dicom_series_from_dataset(db, ds, patient):
         tqdm.write('Insert new DicomStudy {}'.format(dicom_study))
 
     # id INTEGER PRIMARY KEY NOT NULL,\
-    # injection_id INTEGER,\
-    # image_size TEXT,\
-    # image_spacing TEXT,\
-    # folder TEXT,\
-    # dicom_serie_table.create_column('acquisition_date', db.types.datetime)
+        # injection_id INTEGER,\
+        # image_size TEXT,\
+        # image_spacing TEXT,\
+        # folder TEXT,\
+        # dicom_serie_table.create_column('acquisition_date', db.types.datetime)
     # dicom_serie_table.create_column('reconstruction_date', db.types.datetime)
 
     dicom_series = Box()
     dicom_series.dicom_study_id = dicom_study.id
     dicom_series.series_uid = ds.data_element("SeriesInstanceUID").value
+
     try:
         dicom_series.series_description = ds.data_element("SeriesDescription").value
     except:
         dicom_series.series_description = ''
+
     try:
         dicom_series.modality = ds.Modality
     except:
         dicom_series.modality = ''
+
     try:
         dicom_series.frame_of_reference_uid = ds.FrameOfReferenceUID
     except:
         dicom_series.frame_of_reference_uid = ''
+
+    # dataset_name
+    dicom_series.dataset_name = ''
     try:
-        dicom_series.dataset_name = dataset_name = ds[0x0011, 0x1012].value.decode("utf-8")
+        dicom_series.dataset_name = ds[0x0011, 0x1012].value # .decode("utf-8")
     except:
-        dicom_series.dataset_name = ''
+        pass
+    a = dicom_series.dataset_name
+    if isinstance(a, pydicom.multival.MultiValue):
+        s = ''
+        for v in a:
+            s += v+' '
+            dicom_series.dataset_name = s
 
     # dates
     try:
@@ -284,8 +299,8 @@ def insert_dicom_series_from_dataset(db, ds, patient):
         reconstruction_date = acquisition_date
     else:
         reconstruction_date = dcm_str_to_date(reconstruction_date+' '+reconstruction_time)
-    dicom_series.acquisition_date = acquisition_date
-    dicom_series.reconstruction_date = reconstruction_date
+        dicom_series.acquisition_date = acquisition_date
+        dicom_series.reconstruction_date = reconstruction_date
 
     # folder
     dicom_series.folder = build_dicom_series_folder(db, dicom_series)
@@ -414,11 +429,11 @@ def guess_or_create_injection(db, ds, dicom_study, dicom_series):
     #    (0008, 0104) Code Meaning                        LO: '^68^Galium'
 
     # 1. try read Radiopharmaceutical Information Sequence
-         # 2. Yes: read injection, info
-         # 3. try to find one: rad, patient, date, total
-         # 4. if no CREATE
+    # 2. Yes: read injection, info
+    # 3. try to find one: rad, patient, date, total
+    # 4. if no CREATE
     # else
-         # try to find one: patient, date --> max delay few days
+    # try to find one: patient, date --> max delay few days
 
     try:
         # (0054, 0016) Radiopharmaceutical Information Sequence
@@ -440,7 +455,7 @@ def guess_or_create_injection(db, ds, dicom_study, dicom_series):
                 rad_info.code.append(code[0x0008,0x0104].value)
                 # (0018, 1078) Radiopharmaceutical Start DateTime
                 rad_info.date.append(rad[0x0018,0x1078].value)
-            injection = search_injection_from_info(db, dicom_study, rad_info)
+                injection = search_injection_from_info(db, dicom_study, rad_info)
             if not injection:
                 injection = new_injection(db, dicom_study, rad_info)
     except:
@@ -591,5 +606,3 @@ def get_dicom_series_files(db, dicom_series):
     # find files
     res = syd.find(db['File'], id=fids)
     return res
-
-
