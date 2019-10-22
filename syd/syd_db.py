@@ -19,7 +19,7 @@ from .syd_image import *
 from .syd_printformat import *
 
 # -----------------------------------------------------------------------------
-def create_db(filename, overwrite=False):
+def create_db(filename, folder, overwrite=False):
     '''
     Create a new DB
 
@@ -54,7 +54,7 @@ def create_db(filename, overwrite=False):
     info = {
         'filename': filename,
         'creation_date': datetime.datetime.now(),
-        'image_folder': 'data'
+        'image_folder': folder
     }
     dbi.insert(info)
 
@@ -107,7 +107,7 @@ def open_db(filename):
 
     # add triggers
     set_file_triggers(db)
-    set_dicom_triggers(db)
+    #set_dicom_triggers(db) # not needed
 
     return db
 
