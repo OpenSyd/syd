@@ -49,9 +49,13 @@ def insert_default_printformat_elements(db):
         },
         
         { 'name': 'default', 'table_name': 'DicomFile',
-          'format': '{id:4} {file_id} {dicom_series.dicom_study.patient.name} {instance_number} {sop_uid} {absolute_filename}  {labels} '
+          'format': '{id:4} {file_id} {dicom_series.dicom_study.patient.name} {instance_number} {sop_uid} {abs_filename}  {labels} '
         },
         
+        { 'name': 'default', 'table_name': 'File',
+          'format': '{id:4} {folder} {filename} {labels}'
+        },
+
         { 'name': 'file', 'table_name': 'File',
           'format': '{id:4} {absolute_filename}  {labels}'
         },
