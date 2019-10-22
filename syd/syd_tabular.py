@@ -39,8 +39,10 @@ def tabular_get_line_format(db, table_name, format_name, element):
             df += '{'+str(k)+'} '
 
     sorting_key = ''
-    if 'sorting_key' in ff:
-        sorting_key = ff.sorting_key
+    if ff:
+        if 'sorting_key' in ff:
+            sorting_key = ff.sorting_key
+
     return df, sorting_key
 
 # -----------------------------------------------------------------------------
@@ -180,9 +182,23 @@ def tabular_add_abs_filename(db, table_name, elements):
         map_f = {f.id:f for f in files} # keep only one
 
         for e in elements:
-            df = map_df[e.id]
-            f = map_f[df.id]
-            e['abs_filename'] = syd.get_file_absolute_filename(db, f)
+            try:
+                df = map_df[e.id]
+                f = map_f[df.id]
+                e['abs_filename'] = syd.get_file_absolute_filename(db, f)
+            except:
+                print('warning, cannot find', e.id, df.id)
+
+    if table_name == 'DicomFile':
+        ids = [ e.file_id for e in elements]
+        files = syd.find(db['File'], id=ids)
+        map_f = {f.id:f for f in files}
+        for e in elements:
+            try:
+                f = map_f[e.file_id]
+                e['abs_filename'] = syd.get_file_absolute_filename(db, f)
+            except:
+                print('warning, cannot find', e.id, df.id)
 
     if table_name == 'Image':
         ids = [ e.file_mhd_id for e in elements]
@@ -202,7 +218,7 @@ def tabular_add_time_from_inj (db, table_name, elements):
 
     ids = [ e.injection_id for e in elements ]
     injections = syd.find(db['Injection'], id=ids)
-    map_inj = {inj.id:inj for inj in injections} # keep only one    
+    map_inj = {inj.id:inj for inj in injections} # keep only one
     for e in elements:
         if not e.injection_id in map_inj:
             continue

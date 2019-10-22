@@ -94,6 +94,7 @@ def syd_find(table_name, grep, db,
         exit()
 
     # get or create the format from the name
+    sorting_key = None
     if line_format == '':
         line_format, sorting_key = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
 
@@ -180,7 +181,7 @@ def syd_find(table_name, grep, db,
     if delete:
         ids = [i['id'] for i in elements]
         syd.delete(db[table_name], ids)
-        print('Deleted',table_name, ids)
+        print('Delete ',table_name, ids)
 
 
 # -----------------------------------------------------------------------------
