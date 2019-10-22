@@ -9,13 +9,14 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('filename')
 @click.option('--overwrite/--no-overwrite', default=False)
-def syd_create(filename, overwrite):
+@click.option('--folder', default='data', help='Change the data folder, which is data by default')
+def syd_create(filename, folder, overwrite):
     '''
     Create an empty db
     '''
 
     # create the db
-    db = syd.create_db(filename, overwrite)
+    db = syd.create_db(filename, folder, overwrite)
     db = syd.open_db(filename)
 
     # print file and folder
