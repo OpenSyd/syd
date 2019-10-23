@@ -99,7 +99,10 @@ def get_sub_elements(db, elements, format_info, subelements):
         # correspondance current_id -> new_id
         subelements_map = {}
         for s in new_subelements:
-            subelements_map[s.id] = s[format_info.field_name]
+            try:
+                subelements_map[s.id] = s[format_info.field_name]
+            except:
+                subelements_map[s.id] = '?'
         for elem in elements:
             index = elem[format_info.field_format_name]
             if index: # because can be None
@@ -187,7 +190,8 @@ def tabular_add_abs_filename(db, table_name, elements):
                 f = map_f[df.id]
                 e['abs_filename'] = syd.get_file_absolute_filename(db, f)
             except:
-                print('warning, cannot find', e.id, df.id)
+                e['abs_filename'] = 'file_does_not_exist'
+                #print('warning, cannot find', e.id, df.id)
 
     if table_name == 'DicomFile':
         ids = [ e.file_id for e in elements]
@@ -198,7 +202,8 @@ def tabular_add_abs_filename(db, table_name, elements):
                 f = map_f[e.file_id]
                 e['abs_filename'] = syd.get_file_absolute_filename(db, f)
             except:
-                print('warning, cannot find', e.id, df.id)
+                e['abs_filename'] = 'file_does_not_exist'
+                # print('warning, cannot find', e.id, df.id)
 
     if table_name == 'Image':
         ids = [ e.file_mhd_id for e in elements]
@@ -206,8 +211,12 @@ def tabular_add_abs_filename(db, table_name, elements):
         map_f = {f.id:f for f in files}
 
         for e in elements:
-            f = map_f[e.file_mhd_id]
-            e['abs_filename'] = syd.get_file_absolute_filename(db, f)
+            try:
+                f = map_f[e.file_mhd_id]
+                e['abs_filename'] = syd.get_file_absolute_filename(db, f)
+            except:
+                e['abs_filename'] = 'file_does_not_exist'
+                # print('warning, cannot find', e.id, df.id)
 
 
 # -----------------------------------------------------------------------------
