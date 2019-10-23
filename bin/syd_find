@@ -23,6 +23,9 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--delete/--no-delete', '-d', default=False,
               help='Delete found elements')
 
+@click.option('--delete_files', is_flag=True,
+              help='(Only for DicomSeries) Delete the associated files but keep the element in the DB.')
+
 @click.option('--short/--no-short', '-s', default=False,
               help='If true, only display results id (for piped commands)')
 
@@ -49,7 +52,8 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 def syd_find(table_name, grep, db,
              line_format_name, line_format, no_ignore,
-             delete, short, id, vv, sort,
+             delete, delete_files,
+             short, id, vv, sort,
              labels, rm_labels, clean_labels):
     '''
     Find elements in table.
@@ -112,15 +116,15 @@ def syd_find(table_name, grep, db,
     # grep and get str
     if not no_ignore:
         grep = list(grep)
-        grep.append('%ignore')
+        if not 'ignore' in labels:
+            grep.append('%ignore')
 
-    ##### test sort
+    # sort
     if (sort):
         sorting_key = sort
     if sorting_key != None:
         elements = syd.sort_elements(elements, sorting_key)
     elements, s = syd.grep_elements(elements, lf, grep)
-
 
     # Add labels to elements, update and redo formating
     if len(elements) > 0 and (len(labels) > 0 or len(rm_labels)>0):
@@ -129,8 +133,8 @@ def syd_find(table_name, grep, db,
         syd.add_labels(elements, labels)
         syd.rm_labels(elements, rm_labels)
         syd.update(db[table_name], elements)
-        line_format = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
-        lf = syd.add_subfields_to_elements(db, table_name, elements, line_format)
+        line_format, sk = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
+        lf = syd.tabular_add_nested_elements(db, table_name, elements, line_format)
         elements, s = syd.grep_elements(elements, lf, grep)
 
     # remove all labels
@@ -139,8 +143,8 @@ def syd_find(table_name, grep, db,
         elements = syd.find(table, id=ids)
         syd.clean_labels(elements)
         syd.update(db[table_name], elements)
-        line_format = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
-        lf = syd.add_subfields_to_elements(db, table_name, elements, line_format)
+        line_format, sk = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
+        lf = syd.tabular_add_nested_elements(db, table_name, elements, line_format)
         elements, s = syd.grep_elements(elements, lf, grep)
 
     # print everything
@@ -160,28 +164,46 @@ def syd_find(table_name, grep, db,
     # vv ?
     if vv:
         filenames = ''
-        for e in elements:
-            try:
-                # if element is an Image
+
+        if table_name == 'Image':
+            for e in elements:
                 filename = syd.get_image_filename(db, e)
                 filenames = filenames + ' ' + filename
-            except:
-                try:
-                    # if element is an DicomSerie
-                    files = syd.get_dicom_series_files(db, e)
-                    if len(files)>1:
-                        filenames += ' --sequence '
+
+        if table_name == 'DicomSeries':
+            for e in elements:
+                files = syd.get_dicom_series_files(db, e)
+                if len(files)>1:
+                    filenames += ' --sequence '
                     for f in files:
                         filenames += ' ' + syd.get_file_absolute_filename(db, f)
-                except:
-                    filename = '' ## nothing
+
+        if table_name == 'DicomFile':
+            fids = [ df['file_id'] for df in elements]
+            res = syd.find(db['File'], id=fids)
+            for f in res:
+                filenames += ' ' + syd.get_file_absolute_filename(db, f)
+
         if filenames != '':
             os.system('vv '+filenames) # to be changed by subprocess
+        else:
+            print('vv : no filenames found')
 
     if delete:
         ids = [i['id'] for i in elements]
         syd.delete(db[table_name], ids)
         print('Delete ',table_name, ids)
+
+    if delete_files:
+        if table_name != 'DicomSeries':
+            print('The option --delete_files can only be used with DicomSeries')
+            exit
+        ids = [i['id'] for i in elements]
+        dicom_files = syd.find(db['DicomFile'], dicom_series_id = ids)
+        ids = [i['file_id'] for i in dicom_files]
+        syd.delete(db['File'], ids)
+        print(f'Delete {len(ids)} files.')
+
 
 
 # -----------------------------------------------------------------------------
