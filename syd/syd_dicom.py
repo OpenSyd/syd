@@ -98,6 +98,7 @@ def create_dicom_series_table(db):
     dicom_study_id INTEGER NOT NULL,\
     injection_id INTEGER,\
     series_uid INTEGER NOT NULL,\
+    dataset_uid INTEGER,\
     series_description TEXT,\
     modality TEXT,\
     frame_of_reference_uid INTEGER,\
@@ -216,7 +217,12 @@ def insert_dicom_from_file(db, filename, patient):
 
     # retrieve series or create if not exist
     series_uid = ds.data_element("SeriesInstanceUID").value
-    dicom_series = syd.find_one(db['DicomSeries'], series_uid=series_uid)
+    try:
+        dataset_uid = ds[0x0009,0x101e].value # DatasetUID
+    except:
+        dataset_uid = ''
+    dicom_series = syd.find_one(db['DicomSeries'], series_uid=series_uid, dataset_uid=dataset_uid)
+
     if dicom_series is None:
         dicom_series = insert_dicom_series_from_dataset(db, ds, patient)
         dicom_series = syd.insert_one(db['DicomSeries'], dicom_series)
@@ -265,6 +271,11 @@ def insert_dicom_series_from_dataset(db, ds, patient):
     except:
         dicom_series.frame_of_reference_uid = ''
 
+    try:
+        dicom_series.dataset_uid = ds[0x0009,0x101e].value
+    except:
+        dicom_series.dataset_uid = ''
+
     # dataset_name
     dicom_series.dataset_name = ''
     try:
@@ -299,8 +310,9 @@ def insert_dicom_series_from_dataset(db, ds, patient):
         reconstruction_date = acquisition_date
     else:
         reconstruction_date = dcm_str_to_date(reconstruction_date+' '+reconstruction_time)
-        dicom_series.acquisition_date = acquisition_date
-        dicom_series.reconstruction_date = reconstruction_date
+
+    dicom_series.acquisition_date = acquisition_date
+    dicom_series.reconstruction_date = reconstruction_date
 
     # folder
     dicom_series.folder = build_dicom_series_folder(db, dicom_series)
@@ -598,11 +610,12 @@ def get_dicom_series_files(db, dicom_series):
     dicom_files = syd.find(db['DicomFile'], dicom_series_id=dicom_series['id'])
 
     # sort by instance_number
-    dicom_files = sorted(dicom_files, key=lambda kv: kv['instance_number'])
+    dicom_files = sorted(dicom_files, key=lambda kv:  (kv['instance_number'] is None, kv['instance_number']))
 
     # get all associated id of the files
     fids = [ df['file_id'] for df in dicom_files]
 
     # find files
     res = syd.find(db['File'], id=fids)
+
     return res
