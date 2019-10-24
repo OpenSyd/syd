@@ -41,7 +41,7 @@ def insert_default_printformat_elements(db):
         },
         
         { 'name': 'default', 'sorting_key': 'acquisition_date', 'table_name': 'DicomSeries',
-          'format': '{id:4} {dicom_study.patient.name: <10} {injection.radionuclide.name} {time_from_inj} {injection.cycle} {injection.activity_in_MBq} {modality} {acquisition_date:%Y-%m-%d-%H:%M} {image_size} {image_spacing} / {series_description} / {dicom_study.study_description} / {dicom_study.study_name} / {dataset_name} / {labels}'
+          'format': '{id:4} {dicom_study.patient.name: <10} {injection.radionuclide.name} {time_from_inj} {injection.cycle} {injection.activity_in_MBq} {modality} {acquisition_date:%Y-%m-%d-%H:%M} {image_size}x{nb_dicom_files} {image_spacing} / {series_description} / {dicom_study.study_description} / {dicom_study.study_name} / {dataset_name} / {labels}'
         },
         
         { 'name': 'file', 'sorting_key': 'date', 'table_name': 'DicomSeries',

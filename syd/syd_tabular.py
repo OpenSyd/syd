@@ -164,6 +164,8 @@ def tabular_add_special_fct(db, table_name, elements, line_format):
             tabular_add_abs_filename(db, table_name, elements)
         if sub == 'time_from_inj':
             tabular_add_time_from_inj(db, table_name, elements)
+        if sub == 'nb_dicom_files':
+            tabular_add_nb_dicom_files(db, table_name, elements)
 
 
 # -----------------------------------------------------------------------------
@@ -217,6 +219,17 @@ def tabular_add_abs_filename(db, table_name, elements):
             except:
                 e['abs_filename'] = 'file_does_not_exist'
                 # print('warning, cannot find', e.id, df.id)
+
+
+# -----------------------------------------------------------------------------
+def tabular_add_nb_dicom_files(db, table_name, elements):
+
+    if table_name != 'DicomSeries':
+        return
+
+    for e in elements:
+        dicomfiles = syd.find(db['DicomFile'], dicom_series_id=e.id)
+        e['nb_dicom_files'] = len(dicomfiles)
 
 
 # -----------------------------------------------------------------------------
