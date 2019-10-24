@@ -173,23 +173,29 @@ def insert_dicom_from_folder(db, folder, patient):
 
     pbar = tqdm(total=len(files), leave=False)
     dicoms = []
+    future_dicom_files = []
     for f in files:
         f = str(f)
         # ignore if this is a folder
         if (os.path.isdir(f)): continue
         # read the dicom file
-        d = insert_dicom_from_file(db, f, patient)
+        d = insert_dicom_from_file(db, f, patient, future_dicom_files)
         if d != {}:
             dicoms.append(d)
-            # update progress bar
+        # update progress bar
         pbar.update(1)
-        pbar.close()
+
+    # end pbar
+    pbar.close()
+
+    # maybe some remaining future files should be inserted
+    dicom_files = insert_future_dicom_files(db, future_dicom_files)
 
     print('Insertion of {} DICOM files.'.format(len(dicoms)))
 
 
 # -----------------------------------------------------------------------------
-def insert_dicom_from_file(db, filename, patient):
+def insert_dicom_from_file(db, filename, patient, future_dicom_files=[]):
     '''
     Insert or update a dicom from a filename
     '''
@@ -215,6 +221,12 @@ def insert_dicom_from_file(db, filename, patient):
         tqdm.write('Ignoring {}: Dicom SOP Instance already in the db'.format(Path(filename).name))
         return {}
 
+    # check in future
+    for f in future_dicom_files:
+        if sop_uid == f.dicom_file.sop_uid:
+            tqdm.write('Ignoring {}: Dicom SOP Instance already planned'.format(Path(filename).name))
+            return {}
+
     # retrieve series or create if not exist
     series_uid = ds.data_element("SeriesInstanceUID").value
     try:
@@ -228,9 +240,20 @@ def insert_dicom_from_file(db, filename, patient):
         dicom_series = syd.insert_one(db['DicomSeries'], dicom_series)
         tqdm.write('Insert new DicomSeries {}'.format(dicom_series))
 
+        # Insert previous files
+        dd = insert_future_dicom_files(db, future_dicom_files)
+        if len(future_dicom_files) == 1:
+            tqdm.write(f'Insert DicomFile {future_dicom_files[0].dicom_file}')
+        if len(future_dicom_files) > 1:
+            tqdm.write(f'Insert {len(future_dicom_files)} DicomFiles')
+
+        # delete future_dicom_files
+        future_dicom_files[:] = []
+
     # update dicom file
-    dicom_file = insert_dicom_file_from_dataset(db, ds, filename, dicom_series)
-    tqdm.write('Insert DicomFile {}'.format(dicom_file))
+    dicom_file = insert_dicom_file_from_dataset(db, ds, filename, dicom_series, future_dicom_files)
+    if len(future_dicom_files) >1:
+        tqdm.write(f'DicomFile {dicom_file.instance_number} detected (will be inserted later).')
 
 
 # -----------------------------------------------------------------------------
@@ -389,7 +412,12 @@ def guess_or_create_patient(db, ds):
     return patient
 
 # -----------------------------------------------------------------------------
-def insert_dicom_file_from_dataset(db, ds, filename, dicom_series):
+def insert_dicom_file_from_dataset(db, ds, filename, dicom_series, future_dicom_files):
+
+    #do_it_later = False
+    # print(dicom_series.modality)
+    # if dicom_series.modality == 'CT':
+    do_it_later = True
 
     dicom_file = Box()
     dicom_file.sop_uid = ds.data_element("SOPInstanceUID").value
@@ -397,7 +425,7 @@ def insert_dicom_file_from_dataset(db, ds, filename, dicom_series):
     try:
         dicom_file.instance_number = int(ds.InstanceNumber)
     except:
-        pass #dicom_file.instance_number = 0
+        dicom_file.instance_number = None
 
     # insert file in folder
     base_filename = os.path.basename(filename)
@@ -405,7 +433,8 @@ def insert_dicom_file_from_dataset(db, ds, filename, dicom_series):
     afile.folder = dicom_series.folder
     afile.filename = base_filename
     # afil.md5 = later
-    afile = syd.insert_one(db['File'], afile)
+    if not do_it_later:
+        afile = syd.insert_one(db['File'], afile)
 
     # copy the file
     src = filename
@@ -413,11 +442,22 @@ def insert_dicom_file_from_dataset(db, ds, filename, dicom_series):
     dst = os.path.join(dst_folder, base_filename)
     if not os.path.exists(dst_folder):
         os.makedirs(dst_folder)
-    copyfile(src, dst)
+    if not do_it_later:
+        copyfile(src, dst)
 
     # insert the dicom_file
-    dicom_file.file_id = afile.id
-    syd.insert_one(db['DicomFile'], dicom_file)
+    if not do_it_later:
+        dicom_file.file_id = afile.id
+        syd.insert_one(db['DicomFile'], dicom_file)
+
+    # FIXME special case for CT
+    if do_it_later:
+        f = Box()
+        f.afile = afile
+        f.dicom_file = dicom_file
+        f.src = src
+        f.dst = dst
+        future_dicom_files.append(f)
 
     return dicom_file
 
@@ -471,7 +511,7 @@ def guess_or_create_injection(db, ds, dicom_study, dicom_series):
             if not injection:
                 injection = new_injection(db, dicom_study, rad_info)
     except:
-        tqdm.write('Cannot find info on radiopharmaceutical in DICOM')
+        #tqdm.write('Cannot find info on radiopharmaceutical in DICOM')
         injection = search_injection(db, ds, dicom_study, dicom_series)
 
     # return injection (could be None)
@@ -618,4 +658,29 @@ def get_dicom_series_files(db, dicom_series):
     # find files
     res = syd.find(db['File'], id=fids)
 
+    # FIXME sort res like fids (?)
+
     return res
+
+
+# -----------------------------------------------------------------------------
+def insert_future_dicom_files(db, future_dicom_files):
+
+    if len(future_dicom_files) < 1:
+        return []
+
+    all_files = [f.afile for f in future_dicom_files]
+    all_files = syd.insert(db['File'], all_files)
+
+    if len(future_dicom_files)>1:
+        tqdm.write(f'Copying {len(future_dicom_files)} files')
+    for f in future_dicom_files:
+        copyfile(f.src, f.dst)
+
+    for df, f in zip(future_dicom_files, all_files):
+        df.dicom_file.file_id = f.id
+
+    all_dicom_files = [f.dicom_file for f in future_dicom_files]
+    all_dicom_files = syd.insert(db['DicomFile'], all_dicom_files)
+
+    return all_dicom_files

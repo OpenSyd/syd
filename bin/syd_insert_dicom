@@ -39,7 +39,7 @@ def syd_insert_dicom(folder, db, patient_id):
     # go
     if (os.path.isdir(folder)):    
         syd.insert_dicom_from_folder(db, folder, patient)
-    else:
+    else:        
         syd.insert_dicom_from_file(db, folder, patient)
 
 # -----------------------------------------------------------------------------
