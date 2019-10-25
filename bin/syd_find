@@ -89,14 +89,6 @@ def syd_find(table_name, grep, db,
 
     init_nb = len(elements)
 
-    # only ids ?
-    if short:
-        s=''
-        for e in elements:
-            s = s+str(e['id'])+' '
-        print(s)
-        exit()
-
     # get or create the format from the name
     sorting_key = None
     if line_format == '':
@@ -146,6 +138,14 @@ def syd_find(table_name, grep, db,
         line_format, sk = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
         lf = syd.tabular_add_nested_elements(db, table_name, elements, line_format)
         elements, s = syd.grep_elements(elements, lf, grep)
+
+    # only ids ?
+    if short:
+        s=''
+        for e in elements:
+            s = s+str(e['id'])+' '
+        print(s)
+        exit()
 
     # print everything
     print(header)
