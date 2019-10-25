@@ -133,6 +133,9 @@ def insert_image_from_dicom(db, dicom_series):
 
     # create Image
     syd.update_nested_one(db, dicom_series)
+    labels = ''
+    if 'labels' in dicom_series:
+        labels = dicom_series.labels
     img = {
         'patient_id': dicom_series.dicom_study.patient.id,
         'injection_id': dicom_series.injection.id,
@@ -142,7 +145,7 @@ def insert_image_from_dicom(db, dicom_series):
         'frame_of_reference_uid': dicom_series.frame_of_reference_uid,
         'modality': modality,
         'acquisition_date': dicom_series.acquisition_date,
-        'labels': dicom_series.labels
+        'labels': labels
     }
 
     # insert the image in the db
