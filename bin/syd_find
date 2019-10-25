@@ -175,8 +175,8 @@ def syd_find(table_name, grep, db,
                 files = syd.get_dicom_series_files(db, e)
                 if len(files)>1:
                     filenames += ' --sequence '
-                    for f in files:
-                        filenames += ' ' + syd.get_file_absolute_filename(db, f)
+                for f in files:
+                    filenames += ' ' + syd.get_file_absolute_filename(db, f)
 
         if table_name == 'DicomFile':
             fids = [ df['file_id'] for df in elements]
