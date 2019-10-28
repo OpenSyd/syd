@@ -118,9 +118,10 @@ def create_dicom_series_table(db):
 # -----------------------------------------------------------------------------
 def create_dicom_file_table(db):
     '''
-    Create the DicomFile table
-    '''
+    Create the DicomFile table.
 
+    '''    
+    
     # create DicomFile table
     q = 'CREATE TABLE DicomFile (\
     id INTEGER PRIMARY KEY NOT NULL,\
