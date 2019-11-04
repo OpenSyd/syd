@@ -282,7 +282,7 @@ def str_format_map(format_string, mapping):
         format_spec = ':' + format_spec if format_spec else ''
         if field_name is not None:
             field_value, found = get_field_value(field_name, mapping)
-            if not found:
+            if not found or field_value == '?':
                 text = '?'
             else:
                 format_string = '{{{}{}}}'.format(conversion, format_spec)

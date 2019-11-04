@@ -202,9 +202,9 @@ def syd_find(table_name, grep, db,
         dicom_files = syd.find(db['DicomFile'], dicom_series_id = ids)
         ids = [i['file_id'] for i in dicom_files]
         files = syd.find(db['File'], id=ids)
-        
+
         # --> no do not delete file otherwise, DicomFile will also be
-        # deleted (cascade) and images will be added again. 
+        # deleted (cascade) and images will be added again.
         # NO syd.delete(db['File'], ids)
         # Instead we remove the file from disk only (the record in the db still exist).
         n = 0
@@ -216,7 +216,7 @@ def syd_find(table_name, grep, db,
                 n = n+1
             except:
                 print(f'[Cannot remove the file {p}, probably it does not exist already]')
-        
+
         print(f'Delete {n}/{len(ids)} files.')
 
 

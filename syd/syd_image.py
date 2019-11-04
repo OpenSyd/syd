@@ -131,6 +131,11 @@ def insert_image_from_dicom(db, dicom_series):
             warning(s)
             return None
 
+    # injection ?
+    injid = None
+    if 'injection' in dicom_series:
+        injid = dicom_series.injection.id
+
     # create Image
     syd.update_nested_one(db, dicom_series)
     labels = ''
@@ -138,7 +143,7 @@ def insert_image_from_dicom(db, dicom_series):
         labels = dicom_series.labels
     img = {
         'patient_id': dicom_series.dicom_study.patient.id,
-        'injection_id': dicom_series.injection.id,
+        'injection_id': injid,
         'dicom_series_id': dicom_series.id,
         'pixel_type': pixel_type,
         'pixel_unit': pixel_unit,

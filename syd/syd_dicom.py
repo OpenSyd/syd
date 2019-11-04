@@ -120,8 +120,8 @@ def create_dicom_file_table(db):
     '''
     Create the DicomFile table.
 
-    '''    
-    
+    '''
+
     # create DicomFile table
     q = 'CREATE TABLE DicomFile (\
     id INTEGER PRIMARY KEY NOT NULL,\
@@ -254,7 +254,7 @@ def insert_dicom_from_file(db, filename, patient, future_dicom_files=[]):
     # update dicom file
     dicom_file = insert_dicom_file_from_dataset(db, ds, filename, dicom_series, future_dicom_files)
     if len(future_dicom_files) >1:
-        tqdm.write(f'DicomFile {dicom_file.instance_number} detected (will be inserted later).')
+        tqdm.write(f'DicomFile {dicom_file.instance_number} detected (will be inserted later)')
 
 
 # -----------------------------------------------------------------------------
@@ -318,17 +318,21 @@ def insert_dicom_series_from_dataset(db, ds, patient):
         acquisition_date = ds.AcquisitionDate
         acquisition_time = ds.AcquisitionTime
     except:
-        acquisition_date = ds.InstanceCreationDate
-        acquisition_time = ds.InstanceCreationTime
-
-    acquisition_date = dcm_str_to_date(acquisition_date+' '+acquisition_time)
+        try:
+            acquisition_date = ds.InstanceCreationDate
+            acquisition_time = ds.InstanceCreationTime
+        except:
+            acquisition_date = ds.StructureSetDate
+            acquisition_time = ds.StructureSetTime
 
     try:
         reconstruction_date = ds.ContentDate
         reconstruction_time = ds.ContentTime
     except:
-        reconstruction_date = ds.InstanceCreationDate
-        reconstruction_time = ds.InstanceCreationTime
+        reconstruction_date = acquisition_date
+        reconstruction_time = acquisition_time
+
+    acquisition_date = dcm_str_to_date(acquisition_date+' '+acquisition_time)
 
     if len(reconstruction_date) < 8 or len(reconstruction_time) < 6:
         reconstruction_date = acquisition_date
