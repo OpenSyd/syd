@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import syd
+import click
+import re
+from datetime import datetime
+
+# -----------------------------------------------------------------------------
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument('table_name')
+@click.argument('id')
+@click.argument('field')
+@click.argument('value')
+@click.option('--create', '-c', is_flag=True, help='Create the field if does not exist')
+@click.option('--db', default='',
+              help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
+def syd_update(db, table_name, id, field, value, create):
+    '''
+    Update the field value of the given id element in the table.
+
+    Warning: id cannot be updated
+
+    Warning: if field does not exists, use --create to create it
+    '''
+
+    # open the db
+    db_filename = syd.get_db_filename(db)
+    db = syd.open_db(db_filename)
+
+    # check if table exists
+    table_name = syd.check_table_name(db, table_name)
+    table = db[table_name]
+
+    # get element
+    element = syd.find_one(table, id=id)
+    if element == None:
+        s = f"Cannot find element id {id} in {table_name}"
+        syd.raise_except(s)
+    print(element)
+
+    # replace field
+    if field not in element and not create:
+        s = f"Error, the field '{field}' does not exist in table {table_name}"
+        syd.raise_except(s)
+
+    # important: cannot change the id field
+    if field == 'id':
+        s = f"Cannot change the field 'id'"
+        syd.raise_except(s)
+
+    # type ?
+    old_value = element[field]
+    print('old value type',type(old_value))
+    print('value type',type(value))
+
+    if type(old_value) == datetime:
+        print('date')
+        try:
+            value = syd.str_to_date(value)
+        except:
+            s = f'Error, cannot convert {value} to a date, use "Y-m-d H:M"'
+            syd.raise_except(s)
+
+    ## FIXME convert INTEGER REAL TXT DATE only 
+
+    print(value)
+
+    #element.id = 120 # FIXME 
+    element[field] = value
+    print(element)
+    syd.update_one(table, element);
+    print(element)
+    
+
+
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    syd_update()
+
