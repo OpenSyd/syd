@@ -32,8 +32,11 @@ def add_labels(elements, labels):
         all_labels = all_labels+' '+t
 
     for e in elements:
-        if 'labels' in e and e.labels != None :
-            e.labels = e.labels+" "+all_labels
+        if 'labels' in e:
+            if e.labels != None:
+                e.labels = e.labels+" "+all_labels
+            else:
+                e.labels = all_labels
         else:
             e.labels = t
 
@@ -70,3 +73,23 @@ def clean_labels(elements):
     for e in elements:
         if 'labels' in e:
             e.labels = ''
+
+
+
+# -----------------------------------------------------------------------------
+def contains_label(element, label):
+    '''
+    Return true if the element contains the label
+    '''
+
+    if not 'labels' in element:
+        return False
+
+    labels = element.labels.split(' ')
+    for l in labels:
+        if l == label:
+            return True
+
+    return False
+
+            

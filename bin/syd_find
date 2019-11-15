@@ -5,6 +5,7 @@ import syd
 import click
 import os
 import re
+import logging
 
 # -----------------------------------------------------------------------------
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -29,7 +30,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--short/--no-short', '-s', default=False,
               help='If true, only display results id (for piped commands)')
 
-@click.option('--no_ignore', is_flag=True,
+@click.option('--display_ignore', is_flag=True,
               help='If set, remove %ignore in grep ')
 
 @click.option('--id', '-i', multiple=True,
@@ -51,7 +52,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
               help="Sorting key, for example 'acquisition_date'")
 
 def syd_find(table_name, grep, db,
-             line_format_name, line_format, no_ignore,
+             line_format_name, line_format, display_ignore,
              delete, delete_files,
              short, id, vv, sort,
              labels, rm_labels, clean_labels):
@@ -60,7 +61,7 @@ def syd_find(table_name, grep, db,
 
     grep: filter results. Display results that match all (AND) words given. For OR, use something like "A|B". To use negative grep (vgrep), match elements that do not contains a given words, use %. For example, syd_find patients %toto will filter patient that do not contain the word 'toto'.
 
-    By default: the word '%ignore' is added to grep. Use --no-ignore to bypass.
+    By default: the word '%ignore' is added to grep. Use --display-ignore to keep printing element with the ignore label.
 
     labels: add or rm labels to all founded elements. Labels can be a list of words separated by space.
 
@@ -71,12 +72,17 @@ def syd_find(table_name, grep, db,
     db = syd.open_db(db_filename)
 
     # check table exist
-    tname = syd.guess_table_name(db, table_name)
-    if not tname:
-        print('Table {} does not exist. Tables: {}'.format(table_name, db.tables))
-        exit(0)
-    table_name = tname
+    table_name = syd.check_table_name(db, table_name)
     table = db[table_name]
+
+    # syd.log.setLevel(20)
+    # syd.log.warn('This is a warning') 
+    # syd.log.info('This is a info')
+    # syd.log.debug('This is a debug')
+    # print(syd.log)
+    # print(logging.getLevelName(10))
+
+    #exit(0)
 
     # get elements
     if len(id) == 0:
@@ -106,7 +112,7 @@ def syd_find(table_name, grep, db,
         header += h+' '
 
     # grep and get str
-    if not no_ignore:
+    if not display_ignore:
         grep = list(grep)
         if not 'ignore' in labels:
             grep.append('%ignore')

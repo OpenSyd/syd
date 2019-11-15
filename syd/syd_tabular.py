@@ -355,3 +355,27 @@ def grep_elements(elements, format_line, grep):
         s = s[:-1] # remove last break line
 
     return elements, s
+
+# -----------------------------------------------------------------------------
+def grep(db, table_name, elements, line_format_name='default', grep=[]):
+    '''
+    Simple print/grep helper function
+    '''
+
+    if len(elements)<1:
+        return elements, ''
+
+    # Get line format
+    line_format, sorting_key = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
+
+    # add nested elements
+    lf = syd.tabular_add_nested_elements(db, table_name, elements, line_format)
+    syd.tabular_add_special_fct(db, table_name, elements, line_format)
+
+    # perform grep
+    elements, s = syd.grep_elements(elements, lf, grep)
+
+    # return
+    return elements, s
+
+

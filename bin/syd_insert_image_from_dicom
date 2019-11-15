@@ -8,11 +8,11 @@ import click
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('dicomseries', nargs=-1)
-@click.option('--tag', default='', multiple=True,
-              help='Add a tag')
+@click.option('--label', default='', multiple=True,
+              help='Add a label')
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
-def syd_insert_image_from_dicom(dicomseries, tag, db):
+def syd_insert_image_from_dicom(dicomseries, label, db):
     '''
     Convert dicom image to mhd image.
 
@@ -36,8 +36,8 @@ def syd_insert_image_from_dicom(dicomseries, tag, db):
         im = syd.insert_image_from_dicom(db, dicom_serie)
         if im == None:
             continue
-        if len(tag) != 0:
-            syd.add_tags(im, tag)
+        if len(label) != 0:
+            syd.add_labels(im, label)
             syd.update_one(db['Image'], im)
         p = syd.get_image_patient(db, im)
         f = syd.get_image_filename(db, im)

@@ -47,9 +47,10 @@ def build_image_folder(db, image):
     '''
 
     pname = syd.find_one(db['Patient'], id=image['patient_id'])['name']
-    date = image['acquisition_date'].strftime('%Y-%m-%d')
-    modality = image['modality']
-    folder = build_folder(db, pname, date, modality)
+    #date = image['acquisition_date'].strftime('%Y-%m-%d')
+    #modality = image['modality']
+    #folder = build_folder(db, pname, date, modality)
+    folder = pname
     return folder
 
 
@@ -133,8 +134,8 @@ def insert_image_from_dicom(db, dicom_series):
 
     # injection ?
     injid = None
-    if 'injection' in dicom_series:
-        injid = dicom_series.injection.id
+    if 'injection_id' in dicom_series:
+        injid = dicom_series.injection_id
 
     # create Image
     syd.update_nested_one(db, dicom_series)

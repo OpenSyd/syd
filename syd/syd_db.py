@@ -18,6 +18,9 @@ from .syd_helpers import *
 from .syd_image import *
 from .syd_printformat import *
 
+import logging
+log = logging.getLogger()
+
 # -----------------------------------------------------------------------------
 def create_db(filename, folder, overwrite=False):
     '''
@@ -131,7 +134,7 @@ def get_db_filename(filename):
 # -----------------------------------------------------------------------------
 def insert(table, elements):
     '''
-    Bulk insert all elements in the table.
+    Bu insert all elements in the table.
     Elements are given as vector of dictionary
     '''
 
@@ -142,6 +145,7 @@ def insert(table, elements):
     try:
         with table.db as tx:
             for p in elements:
+                p['table_name'] = table.name
                 i = tx[table.name].insert(p)
                 p['id'] = i
     except Exception as e:
@@ -154,9 +158,10 @@ def insert_one(table, element):
     '''
     Bulk insert one element in the table.
     '''
+    element['table_name'] = table.name
     elements = [element]
     e = insert(table, elements)
-    return e[0]
+    return Box(e[0])
 
 
 # -----------------------------------------------------------------------------
@@ -221,10 +226,15 @@ def update_one(table, element):
     Update a single element according to the 'id'
     '''
 
+    e = syd.find_one(table, id=element['id'])
+    if e == None:
+        s = f'Error cannot update_one table {table.name}, the id is not found \n Element is {element}'
+        raise_except(s)
+
     try:
-        table.update(element, ['id'])
+        table.update(element, ['id']) ##FIXME
     except:
-        s = 'Error while updating {}, id not found ?'.format(element)
+        s = f'Error while updating table {table.name}, type issue ? \n Element is {element}'
         raise_except(s)
 
 
@@ -353,3 +363,14 @@ def sort_elements(elements, sorting_key):
 
     return elements
         
+
+# -----------------------------------------------------------------------------
+def check_table_name(db, table_name):
+    # check table exist
+    tname = syd.guess_table_name(db, table_name)
+    if not tname:
+        print('Table {} does not exist. Tables: {}'.format(table_name, db.tables))
+        exit(0)
+    table_name = tname
+    return table_name
+    
