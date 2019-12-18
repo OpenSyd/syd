@@ -11,6 +11,32 @@ from box import Box, BoxKeyError
 from difflib import SequenceMatcher
 
 # -----------------------------------------------------------------------------
+def replace_key_with_id(element, key_name, table, table_key_name):
+    '''
+    Replace the key 'key_name' in the element (dict) with the id of the
+    element find in the table
+    '''
+    #p = table.find_one(table_key_name=element[key_name])
+    statement = 'SELECT id FROM '+table.name+' WHERE '+table_key_name+' = "'+element[key_name]+'"'
+    i = 0
+    s = element[key_name]
+    res = table.db.query(statement)
+    for row in res:
+        if (i != 0):
+            s = 'Error, table {} has several elements with {}={}'.format(table.name, table_key_name, s)
+            raise_except(s)
+        element.pop(key_name)
+        k = table.name.lower()+'_id'
+        element[k] = row['id']
+        i = i +1
+    if (i ==0):
+        s = 'Error, table {} does not contain element with {}={}'.format(table.name, table_key_name, s)
+        raise_except(s)
+
+    return element
+
+
+# -----------------------------------------------------------------------------
 def str_to_date(str):
     '''
     Convert string to datetime
@@ -131,4 +157,44 @@ def filter_elements(elements, grep):
                 res.append(e)
 
     return res
+
+
+# -----------------------------------------------------------------------------
+def update_nested(db, elements):
+    '''
+    Update all nested elements (see update_nested_one)
+    '''
+    for e in elements:
+        update_nested_one(db, e)
+    
+   
+# -----------------------------------------------------------------------------
+def update_nested_one(db, element):
+    '''
+    Consider an input element having nested element. Update them.
+
+    For example, if patient is {id:'1', injection:{id:12, ...}, injection_id:12, ...}
+    the nested injection will be updated
+    '''
+
+    m = {}
+    for k in element:
+        if not k[-3:] == '_id':
+            continue
+
+        field = k[:-3]
+        table = syd.guess_table_name(db, field)
+        if table == None: # may append for xample with dicom_id
+            continue
+        eid = element[k]
+        nested_elem = syd.find_one(db[table], id=eid)
+        if nested_elem == None:
+            continue
+        m[field] = nested_elem
+
+    for f in m:
+        update_nested_one(db, m[f])
+        element[f] = m[f]
+
+
 

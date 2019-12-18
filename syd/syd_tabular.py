@@ -21,6 +21,7 @@ def tabular_get_line_format(db, table_name, format_name, element):
 
     table_name = syd.guess_table_name(db, table_name)
     formats = syd.find(db['PrintFormat'], table_name=table_name)
+
     df = None
     ff = None
     for f in formats:

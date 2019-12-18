@@ -21,15 +21,30 @@ from .syd_printformat import *
 import logging
 log = logging.getLogger()
 
+# =============================================================================
+# TODO        TODO           TODO           TODO
+# rename check_table_name -> guess_table_name with exception
+# logger
+# exception
+# unit tests 
+# =============================================================================
+
+
 # -----------------------------------------------------------------------------
 def create_db(filename, folder, overwrite=False):
     '''
-    Create a new DB
+    Create a new database with given filename and folder.
 
-    Tables:
+    All default tables are created:
     - Info
     - Patient
+    - Radionuclide
     - Injection
+    - DicomStudy
+    - DicomSerie
+    - DicomFile
+    - File
+    - Image
     '''
 
     # FIXME check if already exist
@@ -37,7 +52,7 @@ def create_db(filename, folder, overwrite=False):
         raise RuntimeError(filename+' is a directory')
     if (os.path.isfile(filename)):
         if (overwrite):
-            print('Remove',filename)
+            #print('Remove',filename)
             os.remove(filename)
         else:
             raise RuntimeError(filename+' already exist')
@@ -117,7 +132,7 @@ def open_db(filename):
 # -----------------------------------------------------------------------------
 def get_db_filename(filename):
     '''
-    Check environment variable SYD_DB_FILENAME if filename is void
+    If filename is empty, check the environment variable SYD_DB_FILENAME
     '''
 
     # check if read filename from environment variable
@@ -134,8 +149,8 @@ def get_db_filename(filename):
 # -----------------------------------------------------------------------------
 def insert(table, elements):
     '''
-    Bu insert all elements in the table.
-    Elements are given as vector of dictionary
+    Insert all elements in the given table.
+    Elements are given as vector of dictionary or a Box
     '''
 
     if not isinstance(elements, list):
@@ -145,7 +160,7 @@ def insert(table, elements):
     try:
         with table.db as tx:
             for p in elements:
-                p['table_name'] = table.name
+                p['_table_name_'] = table.name
                 i = tx[table.name].insert(p)
                 p['id'] = i
     except Exception as e:
@@ -156,9 +171,9 @@ def insert(table, elements):
 # -----------------------------------------------------------------------------
 def insert_one(table, element):
     '''
-    Bulk insert one element in the table.
+    Insert one single element in the table.
     '''
-    element['table_name'] = table.name
+    element['_table_name_'] = table.name
     elements = [element]
     e = insert(table, elements)
     return Box(e[0])
@@ -175,7 +190,7 @@ def delete_one(table, id):
 # -----------------------------------------------------------------------------
 def delete(table, ids):
     '''
-    Delete one element from the given table
+    Delete several elements from the given table
     '''
 
     if len(ids) == 0: return
@@ -192,32 +207,6 @@ def delete(table, ids):
     except Exception as e:
         s = 'Error, cannot delete element {} in table {} (maybe it is used in another table ?)'.format(ids, table.name)
         raise_except(s)
-
-
-# -----------------------------------------------------------------------------
-def replace_key_with_id(element, key_name, table, table_key_name):
-    '''
-    Replace the key 'key_name' in the element (dict) with the id of the
-    element find in the table
-    '''
-    #p = table.find_one(table_key_name=element[key_name])
-    statement = 'SELECT id FROM '+table.name+' WHERE '+table_key_name+' = "'+element[key_name]+'"'
-    i = 0
-    s = element[key_name]
-    res = table.db.query(statement)
-    for row in res:
-        if (i != 0):
-            s = 'Error, table {} has several elements with {}={}'.format(table.name, table_key_name, s)
-            raise_except(s)
-        element.pop(key_name)
-        k = table.name.lower()+'_id'
-        element[k] = row['id']
-        i = i +1
-    if (i ==0):
-        s = 'Error, table {} does not contain element with {}={}'.format(table.name, table_key_name, s)
-        raise_except(s)
-
-    return element
 
 
 # -----------------------------------------------------------------------------
@@ -261,18 +250,19 @@ def find_one(table, **kwargs):
     elem = table.find_one(**kwargs)
     if not elem:
         return None
-    elem['table_name'] = table.name
+    elem['_table_name_'] = table.name
     return Box(elem)
 
 # -----------------------------------------------------------------------------
 def find(table, **kwargs):
     '''
-    Retrieve elements from query
+    Retrieve elements from query. See module Dataset for query.
+    Example: syd.find(db['Patient'], name='toto')
     '''
     elem = table.find(**kwargs)
     elements = []
     for e in elem:
-        e['table_name'] = table.name
+        e['_table_name_'] = table.name
         elements.append(Box(e))
 
     return elements
@@ -285,7 +275,7 @@ def find_all(table):
     elem = table.all()
     elements = []
     for e in elem:
-        e['table_name'] = table.name
+        e['_table_name_'] = table.name
         elements.append(Box(e))
 
     return elements
@@ -294,7 +284,7 @@ def find_all(table):
 # -----------------------------------------------------------------------------
 def find_join_one(element, table, field_id):
     '''
-    Retrieve join element with tablename_id
+    Retrieve the join element with id = field_id
     '''
     if not element:
         return None
@@ -307,54 +297,11 @@ def find_join_one(element, table, field_id):
         return None
     return Box(elem)
 
-
-# -----------------------------------------------------------------------------
-def update_nested(db, elements):
-    '''
-    TODO
-    '''
-
-    for e in elements:
-        update_nested_one(db, e)
-    
-   
-# -----------------------------------------------------------------------------
-def update_nested_one(db, element):
-    '''
-    TODO
-    '''
-
-    m = {}
-    for k in element:
-        if not k[-3:] == '_id':
-            continue
-
-        field = k[:-3]
-        table = syd.guess_table_name(db, field)
-        if table == None: # may append for xample with dicom_id
-            continue
-        eid = element[k]
-        nested_elem = syd.find_one(db[table], id=eid)
-        if nested_elem == None:
-            continue
-        m[field] = nested_elem
-
-    for f in m:
-        update_nested_one(db, m[f])
-        element[f] = m[f]
-
-
-# -----------------------------------------------------------------------------
-def find_grep(db, table_name, grep, line_format_name):
-    '''
-    Helper fct
-    '''
-
-    print('here')
-        
-
 # -----------------------------------------------------------------------------
 def sort_elements(elements, sorting_key):
+    '''
+    Sort elements list according to the given field
+    '''
     try:
         elements = sorted(elements, key = lambda i:i[sorting_key])
     except:
@@ -366,7 +313,9 @@ def sort_elements(elements, sorting_key):
 
 # -----------------------------------------------------------------------------
 def check_table_name(db, table_name):
-    # check table exist
+    '''
+    Try to guess the table from the given name, retrive the real table name if exist
+    '''
     tname = syd.guess_table_name(db, table_name)
     if not tname:
         print('Table {} does not exist. Tables: {}'.format(table_name, db.tables))
@@ -374,3 +323,4 @@ def check_table_name(db, table_name):
     table_name = tname
     return table_name
     
+
