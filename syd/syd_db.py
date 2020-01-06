@@ -250,7 +250,6 @@ def find_one(table, **kwargs):
     elem = table.find_one(**kwargs)
     if not elem:
         return None
-    elem['_table_name_'] = table.name
     return Box(elem)
 
 # -----------------------------------------------------------------------------
@@ -262,7 +261,6 @@ def find(table, **kwargs):
     elem = table.find(**kwargs)
     elements = []
     for e in elem:
-        e['_table_name_'] = table.name
         elements.append(Box(e))
 
     return elements
@@ -272,10 +270,12 @@ def find_all(table):
     '''
     Retrieve all elements
     '''
+    syd.log.info('find alll toto iciciciic')
+    #print(syd.log.level)
+
     elem = table.all()
     elements = []
     for e in elem:
-        e['_table_name_'] = table.name
         elements.append(Box(e))
 
     return elements

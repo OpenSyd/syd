@@ -6,6 +6,7 @@ import click
 import os
 import re
 import logging
+logger=logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -51,11 +52,13 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--sort', default='',
               help="Sorting key, for example 'acquisition_date'")
 
+@syd.add_options(syd.common_options)
 def syd_find(table_name, grep, db,
              line_format_name, line_format, display_ignore,
              delete, delete_files,
              short, id, vv, sort,
-             labels, rm_labels, clean_labels):
+             labels, rm_labels, clean_labels,
+             **kwargs):
     '''
     Find elements in table.
 
@@ -67,6 +70,12 @@ def syd_find(table_name, grep, db,
 
     '''
 
+    # logger
+    syd.logging_conf(**kwargs)
+    #syd.log.setLevel(0) # for debug
+
+    syd.log.info('toto')
+
     # open the db
     db_filename = syd.get_db_filename(db)
     db = syd.open_db(db_filename)
@@ -74,15 +83,6 @@ def syd_find(table_name, grep, db,
     # check table exist
     table_name = syd.check_table_name(db, table_name)
     table = db[table_name]
-
-    # syd.log.setLevel(20)
-    # syd.log.warn('This is a warning') 
-    # syd.log.info('This is a info')
-    # syd.log.debug('This is a debug')
-    # print(syd.log)
-    # print(logging.getLevelName(10))
-
-    #exit(0)
 
     # get elements
     if len(id) == 0:

@@ -12,14 +12,6 @@ python scripts based on the gatetools modules. You can of course also define
 your own logging configuration.
 """
 
-# -----------------------------------------------------------------------------
-#   Copyright (C): OpenGATE Collaboration
-#   This software is distributed under the terms
-#   of the GNU Lesser General  Public Licence (LGPL)
-#   See LICENSE.md for further details
-# -----------------------------------------------------------------------------
-
-
 import logging
 from datetime import datetime
 import os, sys
