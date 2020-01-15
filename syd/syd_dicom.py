@@ -229,7 +229,11 @@ def insert_dicom_from_file(db, filename, patient, future_dicom_files=[]):
             return {}
 
     # retrieve series or create if not exist
-    series_uid = ds.data_element("SeriesInstanceUID").value
+    try:
+        series_uid = ds.data_element("SeriesInstanceUID").value
+    except:
+        tqdm.write('Ignoring {}: Dicom SOP Instance does not exist'.format(Path(filename).name))
+        return {}
     try:
         dataset_uid = ds[0x0009,0x101e].value # DatasetUID
     except:
@@ -689,3 +693,4 @@ def insert_future_dicom_files(db, future_dicom_files):
     all_dicom_files = syd.insert(db['DicomFile'], all_dicom_files)
 
     return all_dicom_files
+
