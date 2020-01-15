@@ -170,7 +170,7 @@ def insert_dicom_from_folder(db, folder, patient):
 
     # get all the files (recursively)
     files = list(Path(folder).rglob("*"))
-    print('Found {} files/folders in {}'.format(len(files), folder))
+    tqdm.write('Found {} files/folders in {}'.format(len(files), folder))
 
     pbar = tqdm(total=len(files), leave=False)
     dicoms = []
@@ -192,7 +192,7 @@ def insert_dicom_from_folder(db, folder, patient):
     # maybe some remaining future files should be inserted
     dicom_files = insert_future_dicom_files(db, future_dicom_files)
 
-    print('Insertion of {} DICOM files.'.format(len(dicoms)))
+    tqdm.write('Insertion of {} DICOM files.'.format(len(dicoms)))
 
 
 # -----------------------------------------------------------------------------
