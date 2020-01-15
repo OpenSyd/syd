@@ -238,7 +238,15 @@ def insert_dicom_from_file(db, filename, patient, future_dicom_files=[]):
         dataset_uid = ds[0x0009,0x101e].value # DatasetUID
     except:
         dataset_uid = ''
-    dicom_series = syd.find_one(db['DicomSeries'], series_uid=series_uid, dataset_uid=dataset_uid)
+    dicom_series_same_uid = syd.find(db['DicomSeries'], series_uid=series_uid, dataset_uid=dataset_uid)
+    dicom_series = []
+    for dicom_serie in dicom_series_same_uid:
+        if not dicom_serie.dataset_uid == '':
+            dicom_series += [dicom_serie]
+    if len(dicom_series) == 0:
+        dicom_series = None
+    else:
+        dicom_series = dicom_series[0]
 
     if dicom_series is None:
         dicom_series = insert_dicom_series_from_dataset(db, ds, patient)
