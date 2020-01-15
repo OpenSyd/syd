@@ -87,7 +87,26 @@ def create_db(filename, folder, overwrite=False):
     create_dicom_file_table(db)
     create_image_table(db)
 
+    # insert all columns for all tables in printFormat
+    insertFullPrintFormat(db)
+
     return db
+
+# -----------------------------------------------------------------------------
+def insertFullPrintFormat(db):
+    '''
+    Insert in PrintFormat table all columns for all tables of db
+    '''
+    formats = []
+    for table in db.tables:
+        allColumns = ""
+        for column in db[table].table.columns:
+            allColumns += "{" + str(column)[len(table)+1:] + "} "
+        format = {"name": "full",
+                  "table_name": table,
+                  "format": allColumns}
+        formats += [format]
+    syd.insert(db["PrintFormat"], formats)
 
 # -----------------------------------------------------------------------------
 def open_db(filename):
