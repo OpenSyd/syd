@@ -106,6 +106,7 @@ def create_dicom_series_table(db):
     image_size TEXT,\
     image_spacing TEXT,\
     folder TEXT,\
+    image_comments TEXT,\
     FOREIGN KEY (dicom_study_id) REFERENCES DicomStudy (id) on delete cascade,\
     FOREIGN KEY (injection_id) REFERENCES Injection (id) on delete cascade\
     )'
@@ -324,6 +325,18 @@ def insert_dicom_series_from_dataset(db, ds, patient):
         for v in a:
             s += v+' '
             dicom_series.dataset_name = s
+
+    # image_comments
+    dicom_series.image_comments = ''
+    try:
+        dicom_series.image_comments = ds[0x0020, 0x4000].value + ' '
+    except:
+        pass
+    try:
+        for rad in ds[0x0054, 0x0012]:
+          dicom_series.image_comments += rad[0x0054, 0x0018].value + ' '
+    except:
+        pass
 
     # dates
     try:
