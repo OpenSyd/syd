@@ -555,7 +555,7 @@ def search_injection_from_info(db, dicom_study, rad_info):
         return None
 
     # check date and activity
-    max_time_days = timedelta(1.0/24.0/60*10) # 10 minutes # FIXME  <------------------------ options
+    max_time_days = timedelta(1.0) # 10 minutes # FIXME  <------------------------ options
     found = None
     for ic in inj_candidates:
         d = ic.date
@@ -566,6 +566,7 @@ def search_injection_from_info(db, dicom_study, rad_info):
         if t <= max_time_days:
             act_diff = np.fabs(ic.activity_in_MBq - rad_info.total_dose)
             found = ic
+            tqdm.write('Timedelta superior to 10 minutes')
 
     if found:
         tqdm.write(f'Injection found : {found}')
