@@ -106,6 +106,7 @@ def create_dicom_series_table(db):
     image_size TEXT,\
     image_spacing TEXT,\
     folder TEXT,\
+    image_comments TEXT,\
     FOREIGN KEY (dicom_study_id) REFERENCES DicomStudy (id) on delete cascade,\
     FOREIGN KEY (injection_id) REFERENCES Injection (id) on delete cascade\
     )'
@@ -170,7 +171,7 @@ def insert_dicom_from_folder(db, folder, patient):
 
     # get all the files (recursively)
     files = list(Path(folder).rglob("*"))
-    print('Found {} files/folders in {}'.format(len(files), folder))
+    tqdm.write('Found {} files/folders in {}'.format(len(files), folder))
 
     pbar = tqdm(total=len(files), leave=False)
     dicoms = []
@@ -192,7 +193,7 @@ def insert_dicom_from_folder(db, folder, patient):
     # maybe some remaining future files should be inserted
     dicom_files = insert_future_dicom_files(db, future_dicom_files)
 
-    print('Insertion of {} DICOM files.'.format(len(dicoms)))
+    tqdm.write('Insertion of {} DICOM files.'.format(len(dicoms)))
 
 
 # -----------------------------------------------------------------------------
@@ -238,7 +239,15 @@ def insert_dicom_from_file(db, filename, patient, future_dicom_files=[]):
         dataset_uid = ds[0x0009,0x101e].value # DatasetUID
     except:
         dataset_uid = ''
-    dicom_series = syd.find_one(db['DicomSeries'], series_uid=series_uid, dataset_uid=dataset_uid)
+    dicom_series_same_uid = syd.find(db['DicomSeries'], series_uid=series_uid, dataset_uid=dataset_uid)
+    dicom_series = []
+    for dicom_serie in dicom_series_same_uid:
+        if not dicom_serie.dataset_uid == '':
+            dicom_series += [dicom_serie]
+    if len(dicom_series) == 0:
+        dicom_series = None
+    else:
+        dicom_series = dicom_series[0]
 
     if dicom_series is None:
         dicom_series = insert_dicom_series_from_dataset(db, ds, patient)
@@ -316,6 +325,18 @@ def insert_dicom_series_from_dataset(db, ds, patient):
         for v in a:
             s += v+' '
             dicom_series.dataset_name = s
+
+    # image_comments
+    dicom_series.image_comments = ''
+    try:
+        dicom_series.image_comments = ds[0x0020, 0x4000].value + ' '
+    except:
+        pass
+    try:
+        for rad in ds[0x0054, 0x0012]:
+          dicom_series.image_comments += rad[0x0054, 0x0018].value + ' '
+    except:
+        pass
 
     # dates
     try:
