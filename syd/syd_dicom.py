@@ -572,7 +572,7 @@ def search_injection_from_info(db, dicom_study, rad_info):
         return None
 
     # check date and activity
-    max_time_days = timedelta(1.0) # 10 minutes # FIXME  <------------------------ options
+    max_time_days = timedelta(1.0) # 1 day # FIXME  <------------------------ options
     found = None
     for ic in inj_candidates:
         d = ic.date
