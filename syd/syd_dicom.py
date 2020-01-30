@@ -138,7 +138,7 @@ def create_dicom_file_table(db):
     # define trigger
     con = db.engine.connect()
     cur = con.connection.cursor()
-    cur.execute('CREATE TRIGGER on__delete AFTER DELETE ON DicomFile\
+    cur.execute('CREATE TRIGGER on_dicomfile_delete AFTER DELETE ON DicomFile\
     BEGIN\
     DELETE FROM File WHERE id = OLD.file_id;\
     END;')
