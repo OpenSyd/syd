@@ -226,6 +226,8 @@ def insert_new_image(db, img, itk_image):
 
     # create file mhd/raw
     folder = build_image_folder(db, img)
+    if not os.path.exists(os.path.join(db.absolute_data_folder, folder)):
+        os.makedirs(os.path.join(db.absolute_data_folder, folder))
     modality = img['modality']
     id = img['id']
     file_mhd = syd.new_file(db, folder, str(id)+'_'+modality+'.mhd')
