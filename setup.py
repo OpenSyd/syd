@@ -23,7 +23,7 @@ setuptools.setup(
     python_requires='>=3.6',
     install_requires=[
         'click',
-        'dataset',
+        'dataset==1.1.2',
         'pydicom',
         'tqdm',
         'colored',
