@@ -3,7 +3,6 @@
 import dataset
 import pydicom
 import os
-import SimpleITK as sitk
 import itk
 import numpy as np
 from .syd_db import *
@@ -83,7 +82,26 @@ def insert_image_from_dicom(db, dicom_series):
     folder = os.path.join(db.absolute_data_folder, folder)
     suid = dicom_series['series_uid']
 
+    PixelType = itk.ctype('float')
+    Dimension = 3
+
+    ImageType = itk.Image[PixelType, Dimension]
+    namesGenerator = itk.GDCMSeriesFileNames.New()
+    namesGenerator.SetUseSeriesDetails(False)
+    namesGenerator.AddSeriesRestriction("0008|0021")
+    namesGenerator.SetGlobalWarningDisplay(False)
+    namesGenerator.SetDirectory(folder)
+    seriesUID = namesGenerator.GetSeriesUIDs()
+    fileNames = namesGenerator.GetFileNames(seriesUID[0])
+    reader = itk.ImageSeriesReader[ImageType].New()
+    dicomIO = itk.GDCMImageIO.New()
+    reader.SetImageIO(dicomIO)
+    reader.SetFileNames(fileNames)
+    reader.Update()
+    itk_image = reader.GetOutput()
+
     # read dicom image
+    """
     itk_image = None
     if len(files) > 1:
         # sort filenames
@@ -112,7 +130,7 @@ def insert_image_from_dicom(db, dicom_series):
     else:
         filename = get_file_absolute_filename(db, files[0])
         itk_image = sitk.ReadImage(filename)
-
+"""
     # pixel_type (ignored)
     # pixel_type = image.GetPixelIDTypeAsString()
 
@@ -120,17 +138,25 @@ def insert_image_from_dicom(db, dicom_series):
     #GetNumberOfComponentsPerPixel
 
     # convert: assume only 2 type short for CT and float for everything else
+    pixel_type = 'float'
     if modality == 'CT':
         pixel_type = 'signed_short'
-        itk_image = sitk.Cast(itk_image, sitk.sitkInt16)
-    else:
-        pixel_type = 'float'
-        try:
-            itk_image = sitk.Cast(itk_image, sitk.sitkFloat32)
-        except:
-            s = 'Cannot cast image. Ignoring '+str(dicom_series)
-            warning(s)
-            return None
+        InputImageType = itk.Image[itk.F, Dimension]
+        OutputImageType = itk.Image[itk.SS, Dimension]
+
+        castImageFilter = itk.CastImageFilter[InputImageType, OutputImageType].New()
+        castImageFilter.SetInput(itk_image)
+        castImageFilter.Update()
+        itk_image = castImageFilter.GetOutput()
+
+#    else:
+#        pixel_type = 'float'
+#        try:
+#            itk_image = sitk.Cast(itk_image, sitk.sitkFloat32)
+#        except:
+#            s = 'Cannot cast image. Ignoring '+str(dicom_series)
+#            warning(s)
+#            return None
 
     # injection ?
     injid = None
@@ -159,7 +185,7 @@ def insert_image_from_dicom(db, dicom_series):
 
     # write the mhd file
     p = syd.get_image_filename(db, img)
-    sitk.WriteImage(itk_image, p)
+    itk.imwrite(itk_image, p)
 
     return img
 
@@ -200,8 +226,6 @@ def insert_new_image(db, img, itk_image):
     Create a new image in the database: DO NOT COPY itk_image in the db.
     Should be performed after:
                p = syd.get_image_filename(db, img)
-               sitk.WriteImage(itk_image, p)
-               or
                itk.imwrite(itk_image, p)
     img : dict
     itk_image : image itk

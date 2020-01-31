@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import itk
-import SimpleITK as sitk
 import numpy as np
 
 # -----------------------------------------------------------------------------

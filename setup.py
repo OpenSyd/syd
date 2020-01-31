@@ -12,20 +12,22 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://gitlab.in2p3.fr/dsarrut/syd",
+    package_dir={ 'syd': 'syd',
+                  'syd_test': 'syd_test'},
     packages=['syd', 'syd_test'],
     classifiers=(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ),
+    python_requires='>=3.6',
     install_requires=[
         'dataset',
         'pydicom',
         'tqdm',
         'colored',
-        'itk',
-	'python-box',
-        'SimpleITK'
+        'itk>=5',
+        'python-box'
       ],
     scripts=[
         'bin/syd_create',
