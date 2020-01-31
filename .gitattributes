@@ -1,0 +1,2 @@
+syd_test/dataTest/*.dcm filter=lfs diff=lfs merge=lfs -text
+syd_test/dataTest/*.raw filter=lfs diff=lfs merge=lfs -text
