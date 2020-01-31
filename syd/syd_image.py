@@ -30,13 +30,24 @@ def create_image_table(db):
     modality TEXT,\
     FOREIGN KEY(patient_id) REFERENCES Patient(id) on delete cascade,\
     FOREIGN KEY(injection_id) REFERENCES Injection(id) on delete cascade,\
-    FOREIGN KEY(dicom_series_id) REFERENCES DicomSeries(id),\
+    FOREIGN KEY(dicom_series_id) REFERENCES DicomSeries(id) on delete cascade,\
     FOREIGN KEY(file_mhd_id) REFERENCES File(id) on delete cascade,\
     FOREIGN KEY(file_raw_id) REFERENCES File(id) on delete cascade\
     )'
     result = db.query(q)
     image_table = db['Image']
     image_table.create_column('acquisition_date', db.types.datetime)
+
+    # define trigger
+    con = db.engine.connect()
+    cur = con.connection.cursor()
+    cur.execute('CREATE TRIGGER on_image_delete AFTER DELETE ON Image\
+    BEGIN\
+    DELETE FROM File WHERE id = OLD.file_mhd_id;\
+    DELETE FROM File WHERE id = OLD.file_raw_id;\
+    END;')
+    con.close()
+
 
 
 # -----------------------------------------------------------------------------
@@ -239,6 +250,8 @@ def insert_new_image(db, img, itk_image):
 
     # create file mhd/raw
     folder = build_image_folder(db, img)
+    if not os.path.exists(os.path.join(db.absolute_data_folder, folder)):
+        os.makedirs(os.path.join(db.absolute_data_folder, folder))
     modality = img['modality']
     id = img['id']
     file_mhd = syd.new_file(db, folder, str(id)+'_'+modality+'.mhd')

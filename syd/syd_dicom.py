@@ -138,7 +138,7 @@ def create_dicom_file_table(db):
     # define trigger
     con = db.engine.connect()
     cur = con.connection.cursor()
-    cur.execute('CREATE TRIGGER on__delete AFTER DELETE ON DicomFile\
+    cur.execute('CREATE TRIGGER on_dicomfile_delete AFTER DELETE ON DicomFile\
     BEGIN\
     DELETE FROM File WHERE id = OLD.file_id;\
     END;')
@@ -236,14 +236,14 @@ def insert_dicom_from_file(db, filename, patient, future_dicom_files=[]):
         tqdm.write('Ignoring {}: Dicom SOP Instance does not exist'.format(Path(filename).name))
         return {}
     try:
-        dataset_uid = ds[0x0009,0x101e].value # DatasetUID
+        frame_of_reference_uid = ds.FrameOfReferenceUID #ds[0x0020, 0x0052].value # Frame of Reference UID
     except:
-        dataset_uid = ''
+        frame_of_reference_uid = ''
 
-    if dataset_uid == '':
+    if frame_of_reference_uid == '':
         dicom_series = None
     else:
-        dicom_series = syd.find_one(db['DicomSeries'], series_uid=series_uid, dataset_uid=dataset_uid)
+        dicom_series = syd.find_one(db['DicomSeries'], series_uid=series_uid, frame_of_reference_uid=frame_of_reference_uid)
 
     if dicom_series is None:
         dicom_series = insert_dicom_series_from_dataset(db, ds, patient)
