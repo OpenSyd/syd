@@ -81,4 +81,11 @@ new_image = syd.insert_new_image(db, image, itk_image)
 new_image = syd.insert_write_new_image(db, image, itk_image, tags)
 ```
 
+#Test
+
+To run unit tests
+
+```
+python -m unittest syd_test -v
+```
 
