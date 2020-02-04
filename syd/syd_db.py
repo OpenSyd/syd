@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import dataset
+import sqlalchemy
 import sqlite3
 import json
 import os
@@ -58,7 +59,7 @@ def create_db(filename, folder, overwrite=False):
             raise RuntimeError(filename+' already exist')
 
     # create empty db
-    db = dataset.connect('sqlite:///'+filename)
+    db = dataset.connect('sqlite:///'+filename, engine_kwargs={'poolclass':sqlalchemy.pool.StaticPool})
     # conn = sqlite3.connect(filename)
     # c = conn.cursor()
     # c.execute('PRAGMA foreign_keys = ON')
@@ -146,7 +147,7 @@ def open_db(filename):
     # FIXME -> check data folder exist
 
     # connect to the db
-    db = dataset.connect('sqlite:///'+filename)
+    db = dataset.connect('sqlite:///'+filename, engine_kwargs={'poolclass':sqlalchemy.pool.StaticPool})
 
     load_db_information(db, filename)
 
