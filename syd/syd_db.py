@@ -59,8 +59,6 @@ def create_db(filename, folder, overwrite=False):
 
     # create empty db
     db = dataset.connect('sqlite:///'+filename)
-    q = 'PRAGMA foreign_keys = ON;'
-    db.query(q)
     # conn = sqlite3.connect(filename)
     # c = conn.cursor()
     # c.execute('PRAGMA foreign_keys = ON')
@@ -90,6 +88,8 @@ def create_db(filename, folder, overwrite=False):
     # insert all columns for all tables in printFormat
     insertFullPrintFormat(db)
 
+    load_db_information(db, filename)
+
     return db
 
 # -----------------------------------------------------------------------------
@@ -107,6 +107,27 @@ def insertFullPrintFormat(db):
                   "format": allColumns}
         formats += [format]
     syd.insert(db["PrintFormat"], formats)
+
+# -----------------------------------------------------------------------------
+def load_db_information(db, filename):
+    # *NEEDED* to allow foreign keys
+    q = 'PRAGMA foreign_keys = ON;'
+    db.query(q)
+
+    # add absolute filename in the database
+    if os.path.isabs(filename):
+        db.absolute_filename = filename
+    else:
+        db.absolute_filename = os.path.abspath(filename)
+
+    # add absolute folder
+    info = find_one(db['Info'], id=1)
+    folder = info.image_folder
+    db.absolute_data_folder = os.path.join(os.path.dirname(db.absolute_filename), folder)
+
+    # add triggers
+    set_file_triggers(db)
+    #set_dicom_triggers(db) # not needed
 
 # -----------------------------------------------------------------------------
 def open_db(filename):
@@ -127,24 +148,7 @@ def open_db(filename):
     # connect to the db
     db = dataset.connect('sqlite:///'+filename)
 
-    # *NEEDED* to allow foreign keys
-    q = 'PRAGMA foreign_keys = ON;'
-    db.query(q)
-
-    # add absolute filename in the database
-    if os.path.isabs(filename):
-        db.absolute_filename = filename
-    else:
-        db.absolute_filename = os.path.abspath(filename)
-
-    # add absolute folder
-    info = find_one(db['Info'], id=1)
-    folder = info.image_folder
-    db.absolute_data_folder = os.path.join(os.path.dirname(db.absolute_filename), folder)
-
-    # add triggers
-    set_file_triggers(db)
-    #set_dicom_triggers(db) # not needed
+    load_db_information(db, filename)
 
     return db
 
