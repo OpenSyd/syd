@@ -13,7 +13,7 @@ def create_injection_table(db):
     id INTEGER PRIMARY KEY NOT NULL,\
     patient_id INTEGER NOT NULL,\
     radionuclide_id INTEGER NOT NULL,\
-    activity_in_MBq REAL,\
+    activity_in_mbq REAL,\
     cycle INTEGER,\
     FOREIGN KEY(patient_id) REFERENCES Patient(id) on delete cascade\
     FOREIGN KEY(radionuclide_id) REFERENCES Radionuclide(id)\
@@ -22,4 +22,4 @@ def create_injection_table(db):
     injection_table = db['Injection']
     injection_table.create_column('date', db.types.datetime)
     injection_table.create_column('calibration_date', db.types.datetime)
-    injection_table.create_column('calibration_activity_in_MBq', db.types.float)
+    injection_table.create_column('calibration_activity_in_mbq', db.types.float)

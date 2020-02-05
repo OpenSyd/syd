@@ -33,7 +33,7 @@ def insert_default_printformat_elements(db):
           'format': '{id:3} {name: <10} {element: <12} {atomic_number:4d} {mass_number:4d} {metastable:2} {half_life_in_hours:8.2f} {max_beta_minus_energy_in_kev:8.2f}  {labels}' },
         
         { 'name': 'default', 'sorting_key': 'date', 'table_name': 'Injection',
-          'format': '{id:4} [{patient_id}] {patient.name:<5} {radionuclide.name:5} {activity_in_MBq:8.2f} MBq  {date:%Y-%m-%d %H:%M} {cycle} {labels}'
+          'format': '{id:4} [{patient_id}] {patient.name:<5} {radionuclide.name:5} {activity_in_mbq:8.2f} MBq  {date:%Y-%m-%d %H:%M} {cycle} {labels}'
         },
 
         { 'name': 'default', 'table_name': 'DicomStudy',
@@ -41,7 +41,7 @@ def insert_default_printformat_elements(db):
         },
         
         { 'name': 'default', 'sorting_key': 'acquisition_date', 'table_name': 'DicomSeries',
-          'format': '{id:4} {dicom_study.patient.name: <10} {injection.radionuclide.name} {time_from_inj} {injection.cycle} {injection.activity_in_MBq} {modality} {acquisition_date:%Y-%m-%d-%H:%M} {image_size}x{nb_dicom_files} {image_spacing} / {series_description} / {dicom_study.study_description} / {dicom_study.study_name} / {dataset_name} / {labels}'
+          'format': '{id:4} {dicom_study.patient.name: <10} {injection.radionuclide.name} {time_from_inj} {injection.cycle} {injection.activity_in_mbq} {modality} {acquisition_date:%Y-%m-%d-%H:%M} {image_size}x{nb_dicom_files} {image_spacing} / {series_description} / {dicom_study.study_description} / {dicom_study.study_name} / {dataset_name} / {labels}'
         },
         
         { 'name': 'file', 'sorting_key': 'date', 'table_name': 'DicomSeries',

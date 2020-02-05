@@ -581,7 +581,7 @@ def search_injection_from_info(db, dicom_study, rad_info):
         else:
             t = rad_date-d
         if t <= max_time_days:
-            act_diff = np.fabs(ic.activity_in_MBq - rad_info.total_dose)
+            act_diff = np.fabs(ic.activity_in_mbq - rad_info.total_dose)
             found = ic
             tqdm.write('Timedelta superior to 10 minutes')
 
@@ -621,7 +621,7 @@ def new_injection(db, dicom_study, rad_info):
     injection = Box()
     injection.radionuclide_id = rad_info.radionuclide_id
     injection.patient_id = dicom_study.patient_id
-    injection.activity_in_MBq = rad_info.total_dose/1e6
+    injection.activity_in_mbq = rad_info.total_dose/1e6
     injection.date = datetime.strptime(rad_info.date[0], '%Y%m%d%H%M%S')
 
     syd.insert_one(db['Injection'], injection)
