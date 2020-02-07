@@ -6,6 +6,7 @@ import os
 import itk
 import numpy as np
 from .syd_db import *
+import gatetools as gt
 
 # -----------------------------------------------------------------------------
 def create_image_table(db):
@@ -96,7 +97,7 @@ def insert_image_from_dicom(db, dicom_series):
     PixelType = itk.ctype('float')
     Dimension = 3
 
-    ImageType = itk.Image[PixelType, Dimension]
+
     namesGenerator = itk.GDCMSeriesFileNames.New()
     namesGenerator.SetUseSeriesDetails(False)
     namesGenerator.AddSeriesRestriction("0008|0021")
@@ -104,44 +105,13 @@ def insert_image_from_dicom(db, dicom_series):
     namesGenerator.SetDirectory(folder)
     seriesUID = namesGenerator.GetSeriesUIDs()
     fileNames = namesGenerator.GetFileNames(seriesUID[0])
-    reader = itk.ImageSeriesReader[ImageType].New()
-    dicomIO = itk.GDCMImageIO.New()
-    reader.SetImageIO(dicomIO)
-    reader.SetFileNames(fileNames)
-    reader.Update()
-    itk_image = reader.GetOutput()
 
     # read dicom image
-    """
-    itk_image = None
-    if len(files) > 1:
-        # sort filenames
-        series_file_names = sitk.ImageSeriesReader.GetGDCMSeriesFileNames(folder, suid)
-        series_reader = sitk.ImageSeriesReader()
-        series_reader.SetFileNames(series_file_names)
-        itk_image = series_reader.Execute()
-
-        # TRIAL to replace sitk by itk --> FAIL
-
-        # print('done')
-        # reader = itk.ImageSeriesReader.New()
-        # dicomIO = itk.GDCMImageIO.New()
-        # reader.SetImageIO(dicomIO)
-        # dicomFN = itk.GDCMSeriesFileNames.New()
-        # #dicomFN.SetUseSeriesDetails(True)
-        # dicomFN.SetDirectory(folder)
-        # series_file_names = dicomFN.GetFileNames(suid)
-        # print(len(series_file_names))
-        # reader.SetFileNames(series_file_names)
-        # reader.Update()
-        # itk_image = reader.GetOutput()
-        # print('itk_image', itk_image)
-        # exit(0)
-
+    if len(fileNames) > 1:
+        itk_image = gt.read_dicom(fileNames)
     else:
-        filename = get_file_absolute_filename(db, files[0])
-        itk_image = sitk.ReadImage(filename)
-"""
+        itk_image = gt.read_3d_dicom(fileNames)
+
     # pixel_type (ignored)
     # pixel_type = image.GetPixelIDTypeAsString()
 

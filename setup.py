@@ -22,6 +22,7 @@ setuptools.setup(
     ),
     python_requires='>=3.6',
     install_requires=[
+        'gatetools>=0.8.7',
         'click',
         'dataset',
         'pydicom',

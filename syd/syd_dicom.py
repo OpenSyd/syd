@@ -236,18 +236,21 @@ def insert_dicom_from_file(db, filename, patient, future_dicom_files=[]):
         tqdm.write('Ignoring {}: Dicom SOP Instance does not exist'.format(Path(filename).name))
         return {}
     try:
-        frame_of_reference_uid = ds.FrameOfReferenceUID #ds[0x0020, 0x0052].value # Frame of Reference UID
+        number_of_frames = ds[0x0028, 0x0008].value
+        volume = True
     except:
-        frame_of_reference_uid = ''
+        volume = False
 
-    if frame_of_reference_uid == '':
+    if volume:
         dicom_series = None
     else:
-        dicom_series = syd.find_one(db['DicomSeries'], series_uid=series_uid, frame_of_reference_uid=frame_of_reference_uid)
+        dicom_series = syd.find_one(db['DicomSeries'], series_uid=series_uid)
 
     if dicom_series is None:
         dicom_series = insert_dicom_series_from_dataset(db, ds, patient)
         dicom_series = syd.insert_one(db['DicomSeries'], dicom_series)
+        dicom_series.folder = os.path.join(dicom_series.folder, str(dicom_series.id))
+        syd.update_one(db['DicomSeries'], dicom_series)
         tqdm.write('Insert new DicomSeries {}'.format(dicom_series))
 
         # Insert previous files
