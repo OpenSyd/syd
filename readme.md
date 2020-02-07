@@ -1,5 +1,7 @@
 FIXME 
 
+use  ```git clone --recursive ``` or ```git submodule update --init```
+
 SYD PY
 
 # Main API
