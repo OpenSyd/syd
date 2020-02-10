@@ -40,7 +40,8 @@ def create_listmode_file_table(db):
      file TEXT,\
      info TEXT,\
      type TEXT,\
-     FOREIGN KEY(listmode_id) REFERENCES Listmode(id) on delete cascade\)'
+     FOREIGN KEY(listmode_id) REFERENCES Listmode(id) on delete cascade\
+     )'
     result = db.query(q)
 
 
