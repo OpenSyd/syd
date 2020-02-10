@@ -13,6 +13,7 @@ from box import BoxList
 from .syd_patient import *
 from .syd_injection import *
 from .syd_radionuclide import *
+from .syd_listmode import *
 from .syd_dicom import *
 from .syd_file import *
 from .syd_helpers import *
@@ -85,6 +86,8 @@ def create_db(filename, folder, overwrite=False):
     create_dicom_series_table(db)
     create_dicom_file_table(db)
     create_image_table(db)
+    create_listmode_table(db)
+    create_listmode_file_table(db)
 
     # insert all columns for all tables in printFormat
     insertFullPrintFormat(db)
