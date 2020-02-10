@@ -22,10 +22,10 @@ def create_listmode_table(db):
 
     # create Listmode table
     q = 'CREATE TABLE Listmode (\
-	id INTEGER PRIMARY KEY NOT NULL,\
-	injection_id INTEGER NOT NULL,\
-	FOREIGN KEY(injection_id) REFERENCES Injection(id) on delete cascade\
-	)'
+     id INTEGER PRIMARY KEY NOT NULL,\
+     injection_id INTEGER NOT NULL,\
+     FOREIGN KEY(injection_id) REFERENCES Injection(id) on delete cascade\
+     )'
     result = db.query(q)
 
 
