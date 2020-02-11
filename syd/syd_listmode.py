@@ -51,30 +51,26 @@ def insert_listmode_from_file(db, filepath, injection):
     Insert or update a listmode from a filepath
     '''
     var = list(Path(filepath).rglob("*"))
-    tqdm.write('Found {} files/folders in {}'.format(len(var), var))
+    # tqdm.write('Found {} files/folders in {}'.format(len(var), var))
     pbar=tqdm(total=len(var), leave=False)
     max_time_days = timedelta(1.0)
     pattern = re.compile("I\d\d")
     for x in var:
         tmp = x
         x = str(x.name)
-        try:
-            injec = syd.find(db['Injection'], patient_id=injection['patient_id'])
-        except:
-            tqdm.write('Ignoring {}: cannot find corresponding injection'.format(x))
-            return {}
         if x.endswith(".dat"):
             date = return_date(x)
             d = injection['date']
             if d > date:
                 continue
             elif (date - d < max_time_days):
-                listmode = {'injection_id': injection['id']}
-                try:
-                    syd.insert_one(db['Listmode'], listmode)
-                except:
-                    print('Failure to insert Listmode')
-                    return {}
+                if (syd.find_one(db['Listmode'],injection_id=injection['id']) == None):
+                    listmode = {'injection_id': injection['id']}
+                    try:
+                        syd.insert_one(db['Listmode'], listmode)
+                    except:
+                        print('Failure to insert Listmode')
+                        return {}
                 patient = syd.find_one(db['Patient'], id=injection['patient_id'])
                 date_reduite = date.__format__('%Y-%m-%d')
                 tmp = os.path.join(db.absolute_data_folder, patient['name'])
@@ -109,11 +105,13 @@ def insert_listmode_from_file(db, filepath, injection):
             if d > date:
                 continue
             elif (date - d < max_time_days):
-                listmode = {'injection_id': injection['id']}
-                try:
-                    syd.insert_one(db['Listmode'], listmode)
-                except:
-                    print('Failure to insert Listmode')
+                if (syd.find_one(db['Listmode'], injection_id=injection['id']) == None):
+                    listmode = {'injection_id': injection['id']}
+                    try:
+                        syd.insert_one(db['Listmode'], listmode)
+                    except:
+                        print('Failure to insert Listmode')
+                        return {}
                 patient = syd.find_one(db['Patient'], id=injection['patient_id'])
                 date_reduite = date.__format__('%Y-%m-%d')
                 tmp_path = os.path.join(db.absolute_data_folder, patient['name'])

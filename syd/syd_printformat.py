@@ -68,6 +68,14 @@ def insert_default_printformat_elements(db):
           'format': '{id:4} {patient.name:<5} {modality} {acquisition_date:%Y-%m-%d-%H:%M}  {time_from_inj} {injection.radionuclide.name:5} {injection.date:%Y-%m-%d-%H:%M}  {dicom_series_id} {pixel_type} {pixel_unit} {dicom_series.series_description} / {dicom_series.dicom_study.study_description} / {dicom_series.dicom_study.study_name} / {dicom_series.dataset_name}  {labels} '
         },
 
+        {'name': 'default', 'table_name': 'Listmode',
+         'format': '{id:4} [{injection_id}]  {labels}'
+         },
+
+        {'name': 'default', 'table_name': 'ListmodeFile',
+         'format': '{id:4} [{listmode_id}] {file} {info} {type} {labels}'
+         },
+
         { 'name': 'file', 'table_name': 'PrintFormat',
           'format': '{id:4} {name} {table_name} {format})  {labels}'
         },
