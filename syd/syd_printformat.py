@@ -41,7 +41,7 @@ def insert_default_printformat_elements(db):
         },
         
         { 'name': 'default', 'sorting_key': 'acquisition_date', 'table_name': 'DicomSeries',
-          'format': '{id:4} {dicom_study.patient.name: <10} {injection.radionuclide.name} {time_from_inj} {injection.cycle} {injection.activity_in_mbq} {modality} {acquisition_date:%Y-%m-%d-%H:%M} {image_size}x{nb_dicom_files} {image_spacing} / {series_description} / {dicom_study.study_description} / {dicom_study.study_name} / {dataset_name} / {labels}'
+          'format': '{id:4} [{acquisition_id}] {dicom_study.patient.name: <10} {injection.radionuclide.name} {time_from_inj} {injection.cycle} {injection.activity_in_mbq} {modality} {acquisition_date:%Y-%m-%d-%H:%M} {image_size}x{nb_dicom_files} {image_spacing} / {series_description} / {dicom_study.study_description} / {dicom_study.study_name} / {dataset_name} / {labels}'
         },
         
         { 'name': 'file', 'sorting_key': 'date', 'table_name': 'DicomSeries',
@@ -68,12 +68,12 @@ def insert_default_printformat_elements(db):
           'format': '{id:4} {patient.name:<5} {modality} {acquisition_date:%Y-%m-%d-%H:%M}  {time_from_inj} {injection.radionuclide.name:5} {injection.date:%Y-%m-%d-%H:%M}  {dicom_series_id} {pixel_type} {pixel_unit} {dicom_series.series_description} / {dicom_series.dicom_study.study_description} / {dicom_series.dicom_study.study_name} / {dicom_series.dataset_name}  {labels} '
         },
 
-        {'name': 'default', 'table_name': 'Listmode',
-         'format': '{id:4} [{injection_id}]  {labels}'
+        {'name': 'default', 'table_name': 'Acquisition',
+         'format': '{id:4} [{injection_id}] {date:%Y-%m-%d-%H:%M} {modality} {fov} {labels}'
          },
 
-        {'name': 'default', 'table_name': 'ListmodeFile',
-         'format': '{id:4} [{listmode_id}] {file} {info} {type} {labels}'
+        {'name': 'default', 'table_name': 'Listmode',
+         'format': '{id:4} [{acquisition_id}] {file_id} {labels}'
          },
 
         { 'name': 'file', 'table_name': 'PrintFormat',

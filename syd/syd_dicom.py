@@ -97,6 +97,7 @@ def create_dicom_series_table(db):
     id INTEGER PRIMARY KEY NOT NULL,\
     dicom_study_id INTEGER NOT NULL,\
     injection_id INTEGER,\
+    acquisition_id INTEGER,\
     series_uid INTEGER NOT NULL,\
     dataset_uid INTEGER,\
     series_description TEXT,\
@@ -108,7 +109,8 @@ def create_dicom_series_table(db):
     folder TEXT,\
     image_comments TEXT,\
     FOREIGN KEY (dicom_study_id) REFERENCES DicomStudy (id) on delete cascade,\
-    FOREIGN KEY (injection_id) REFERENCES Injection (id) on delete cascade\
+    FOREIGN KEY (injection_id) REFERENCES Injection (id) on delete cascade,\
+    FOREIGN KEY (acquisition_id) REFERENCES Acquisition (id) on delete cascade\
     )'
     result = db.query(q)
     dicom_serie_table = db['DicomSeries']
@@ -249,7 +251,8 @@ def insert_dicom_from_file(db, filename, patient, future_dicom_files=[]):
     if dicom_series is None:
         dicom_series = insert_dicom_series_from_dataset(db, ds, patient)
         dicom_series = syd.insert_one(db['DicomSeries'], dicom_series)
-        dicom_series.folder = os.path.join(dicom_series.folder, str(dicom_series.id))
+        folder_id = 'dicom_' + str(dicom_series.id)
+        dicom_series.folder = os.path.join(dicom_series.folder, folder_id)
         syd.update_one(db['DicomSeries'], dicom_series)
         tqdm.write('Insert new DicomSeries {}'.format(dicom_series))
 
@@ -366,8 +369,7 @@ def insert_dicom_series_from_dataset(db, ds, patient):
     dicom_series.acquisition_date = acquisition_date
     dicom_series.reconstruction_date = reconstruction_date
 
-    # folder
-    dicom_series.folder = build_dicom_series_folder(db, dicom_series)
+
 
     # image size
     image_size, image_spacing = get_dicom_image_info(ds)
@@ -379,18 +381,25 @@ def insert_dicom_series_from_dataset(db, ds, patient):
     if inj:
         dicom_series.injection_id = inj.id
 
+    # try to guess acquisition
+    acq = guess_or_create_acquisition(db,dicom_series,patient)
+    if acq:
+        dicom_series.acquisition_id = acq.id
+
+    # folder
+    dicom_series.folder = build_dicom_series_folder(db, dicom_series)
+
     return dicom_series
 
 # -----------------------------------------------------------------------------
 def build_dicom_series_folder(db, dicom_series):
+    print(dicom_series)
     dicom_study = syd.find_one(db['DicomStudy'], id=dicom_series.dicom_study_id)
     patient_id = dicom_study.patient_id
     pname = syd.find_one(db['Patient'], id=patient_id).name
-    date = dicom_series.acquisition_date.strftime('%Y-%m-%d')
-    modality = dicom_series.modality
-    folder = os.path.join(pname, date)
-    folder = os.path.join(folder, modality)
-    folder = os.path.join(folder, 'dicom')
+    acqui = 'acqui_' + str(dicom_series.acquisition_id)
+    folder = os.path.join(pname, acqui)
+
     return folder
 
 
@@ -547,6 +556,24 @@ def guess_or_create_injection(db, ds, dicom_study, dicom_series):
     return injection
 
 # -----------------------------------------------------------------------------
+def guess_or_create_acquisition(db, dicom_series, patient):
+
+    try:
+
+        acquisition_date = dicom_series.acquisition_date
+        injection = syd.nearest_injection(db, acquisition_date, patient)
+        acquisition = syd.find_one(db['Acquisition'], date=acquisition_date)
+        if not acquisition:
+            acquisition = new_acquisition(db,dicom_series,acquisition_date,injection)
+    except:
+        print('Except')
+        acquisition_date = dicom_series.acquisition_date
+        acquisition = search_acquisition(db, acquisition_date)
+
+
+
+    return acquisition
+# -----------------------------------------------------------------------------
 def search_injection_from_info(db, dicom_study, rad_info):
 
     patient_id = dicom_study.patient_id
@@ -617,8 +644,15 @@ def search_injection(db, ds, dicom_study, dicom_series):
         return found
     else:
         return None
-
-
+# -----------------------------------------------------------------------------
+def search_acquisition(db, date):
+    try:
+        acquisition = syd.find_one(db['Acquisition'], date=date)
+        tqdm.write(f'Acquisition found :{acquisition}')
+    except:
+        acquisition = None
+        tqdm.write('No acquisition found')
+    return acquisition
 # -----------------------------------------------------------------------------
 def new_injection(db, dicom_study, rad_info):
     injection = Box()
@@ -630,6 +664,16 @@ def new_injection(db, dicom_study, rad_info):
     syd.insert_one(db['Injection'], injection)
     tqdm.write(f'Insert new injection {injection}')
     return injection
+# -----------------------------------------------------------------------------
+def new_acquisition(db,dicom_series,date,injection):
+    acquisition = Box()
+    acquisition.injection_id = injection['id']
+    acquisition.date = date
+    acquisition.modality = dicom_series.modality
+
+    syd.insert_one(db['Acquisition'], acquisition)
+    tqdm.write(f'Insert new Acquisition {acquisition}')
+    return acquisition
 
 
 # -----------------------------------------------------------------------------

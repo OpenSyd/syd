@@ -19,6 +19,7 @@ from .syd_file import *
 from .syd_helpers import *
 from .syd_image import *
 from .syd_printformat import *
+from .syd_acquisition import *
 
 import logging
 log = logging.getLogger()
@@ -47,6 +48,8 @@ def create_db(filename, folder, overwrite=False):
     - DicomFile
     - File
     - Image
+    - Listmode
+    - Acquistion
     '''
 
     # FIXME check if already exist
@@ -71,7 +74,7 @@ def create_db(filename, folder, overwrite=False):
     dbi.create_column('creation_date', db.types.datetime)
     info = {
         'filename': filename,
-        'creation_date': datetime.datetime.now(),
+        'creation_date': datetime.now(),
         'image_folder': folder
     }
     dbi.insert(info)
@@ -87,7 +90,7 @@ def create_db(filename, folder, overwrite=False):
     create_dicom_file_table(db)
     create_image_table(db)
     create_listmode_table(db)
-    create_listmode_file_table(db)
+    create_acquisition_table(db)
 
     # insert all columns for all tables in printFormat
     insertFullPrintFormat(db)
