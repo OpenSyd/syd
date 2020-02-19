@@ -1,15 +1,7 @@
 #!/usr/bin/env python3
 import dataset
-import re
 from datetime import datetime
 import syd
-import glob
-import numpy as np
-from box import Box
-import pydicom
-import os
-from shutil import copy
-from tqdm import tqdm
 
 # -----------------------------------------------------------------------------
 def create_acquisition_table(db):

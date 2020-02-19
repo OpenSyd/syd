@@ -179,11 +179,20 @@ def insert_dicom_from_folder(db, folder, patient):
     dicoms = []
     future_dicom_files = []
     for f in files:
+        e= syd.check_type(f)
+        ftype, end = e.split('.')
+        tmp = f
         f = str(f)
         # ignore if this is a folder
         if (os.path.isdir(f)): continue
         # read the dicom file
-        d = insert_dicom_from_file(db, f, patient, future_dicom_files)
+        if ftype == 'Listmode':
+            e = syd.insert_listmode_from_file(db, tmp, patient)
+            if e == 1:
+                continue
+        else:
+            d = insert_dicom_from_file(db, f, patient, future_dicom_files)
+
         if d != {}:
             dicoms.append(d)
         # update progress bar

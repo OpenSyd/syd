@@ -73,7 +73,7 @@ def insert_default_printformat_elements(db):
          },
 
         {'name': 'default', 'table_name': 'Listmode',
-         'format': '{id:4} [{acquisition_id}] {file_id} {labels}'
+         'format': '{id:4} [{acquisition_id}] {date} {file_id} {labels}'
          },
 
         { 'name': 'file', 'table_name': 'PrintFormat',
