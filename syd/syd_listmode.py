@@ -166,7 +166,8 @@ def check_acquisition(db,date,patient):
         min = np.abs(date - acq[0]['date'])
         for tmp in acq:
             m = np.abs(date - tmp['date'])
-            if m<= timedelta(1.0/24.0/60.0*15.0):
+            if m<= timedelta(1.0/24.0/60.0*1.0):
+                # timedelta usefull for multiple listmode for example tomo + wholebody
                 if m <= min:
                     min = m
                     result = tmp
