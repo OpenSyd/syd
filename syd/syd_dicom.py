@@ -9,6 +9,7 @@ from collections import defaultdict
 from tqdm import tqdm
 from .syd_helpers import *
 from .syd_db import *
+from .syd_guess import *
 from shutil import copyfile
 from datetime import datetime
 from datetime import timedelta
@@ -101,6 +102,7 @@ def create_dicom_series_table(db):
     series_uid INTEGER NOT NULL,\
     dataset_uid INTEGER,\
     series_description TEXT,\
+    content_type TEXT,\
     modality TEXT,\
     frame_of_reference_uid INTEGER,\
     dataset_name TEXT,\
@@ -258,7 +260,7 @@ def insert_dicom_from_file(db, filename, patient, future_dicom_files=[]):
         dicom_series = syd.find_one(db['DicomSeries'], series_uid=series_uid)
 
     if dicom_series is None:
-        dicom_series = insert_dicom_series_from_dataset(db, ds, patient)
+        dicom_series = insert_dicom_series_from_dataset(db,filename, ds, patient)
         dicom_series = syd.insert_one(db['DicomSeries'], dicom_series)
         folder_id = 'dicom_' + str(dicom_series.id)
         dicom_series.folder = os.path.join(dicom_series.folder, folder_id)
@@ -282,7 +284,7 @@ def insert_dicom_from_file(db, filename, patient, future_dicom_files=[]):
 
 
 # -----------------------------------------------------------------------------
-def insert_dicom_series_from_dataset(db, ds, patient):
+def insert_dicom_series_from_dataset(db,filename, ds, patient):
 
     # retrieve study or create if not exist
     study_uid = ds.data_element("StudyInstanceUID").value
@@ -378,6 +380,13 @@ def insert_dicom_series_from_dataset(db, ds, patient):
     dicom_series.acquisition_date = acquisition_date
     dicom_series.reconstruction_date = reconstruction_date
 
+    modality, content_type = guess_content_type(filename)
+    dicom_series.content_type = content_type
+
+    if dicom_series.modality != modality:
+        s = f'Error modality are differents {modality}/{dicom_series.modality}'
+        syd.raise_except(s)
+
 
 
     # image size
@@ -435,28 +444,7 @@ def insert_dicom_study_from_dataset(db, ds, patient):
 
     return dicom_study
 
-# -----------------------------------------------------------------------------
-def guess_or_create_patient(db, ds):
 
-    # tyy to retrieve patient from PatientID tag
-    patient_dicom_id = ds.data_element("PatientID").value
-    patient = syd.find_one(db['Patient'], dicom_id=patient_dicom_id)
-
-    # create if not exist
-    if patient is None:
-        patient = Box()
-        patient.dicom_id = patient_dicom_id
-        try:
-            patient.name = str(ds.data_element("PatientName").value)
-            patient.sex = ds.data_element("PatientSex").value
-        except:
-            pass
-        patient.num = 0
-        # FIXME --> to complete
-        patient = syd.insert_one(db['Patient'], patient)
-        tqdm.write('Insert new Patient {}'.format(patient))
-
-    return patient
 
 # -----------------------------------------------------------------------------
 def insert_dicom_file_from_dataset(db, ds, filename, dicom_series, future_dicom_files):
@@ -507,183 +495,6 @@ def insert_dicom_file_from_dataset(db, ds, filename, dicom_series, future_dicom_
         future_dicom_files.append(f)
 
     return dicom_file
-
-# -----------------------------------------------------------------------------
-def guess_or_create_injection(db, ds, dicom_study, dicom_series):
-
-    # EXAMPLE
-
-    #(0040, 2017) Filler Order Number / Imaging Servi LO: 'IM00236518'
-    #(0054, 0016)  Radiopharmaceutical Information Sequence   1 item(s) ----
-    #  (0018, 0031) Radiopharmaceutical                 LO: 'Other'
-    #  (0018, 1070) Radiopharmaceutical Route           LO: 'Intravenous route'
-    #  (0018, 1072) Radiopharmaceutical Start Time      TM: '111200'
-    #  (0018, 1074) Radionuclide Total Dose             DS: "98000000"
-    #  (0018, 1075) Radionuclide Half Life              DS: "4062.599854"
-    #  (0018, 1076) Radionuclide Positron Fraction      DS: "0.891"
-    #  (0018, 1078) Radiopharmaceutical Start DateTime  DT: '20180926111208'
-    #  (0054, 0300)  Radionuclide Code Sequence   1 item(s) ----
-    #    (0008, 0100) Code Value                          SH: 'C-131A3'
-    #    (0008, 0102) Coding Scheme Designator            SH: 'SRT'
-    #    (0008, 0104) Code Meaning                        LO: '^68^Galium'
-
-    # 1. try read Radiopharmaceutical Information Sequence
-    # 2. Yes: read injection, info
-    # 3. try to find one: rad, patient, date, total
-    # 4. if no CREATE
-    # else
-    # try to find one: patient, date --> max delay few days
-
-    try:
-        # (0054, 0016) Radiopharmaceutical Information Sequence
-        rad_seq = ds[0x0054,0x0016]
-        for rad in rad_seq:
-            # (0018, 0031) Radiopharmaceutical
-            rad_rad = rad[0x0018, 0x0031]
-            rad_info = Box()
-            # (0054, 0300) Radionuclide Code Sequence
-            rad_code_seq = rad[0x0054,0x0300]
-            # (0018, 1074) Radionuclide Total Dose
-            rad_info.total_dose = rad[0x0018,0x1074].value
-            #  (0018, 1076) Radionuclide Positron Fraction
-            rad_info.positron_fraction = rad[0x0018,0x1076].value
-            rad_info.code = []
-            rad_info.date = []
-            for code in rad_code_seq:
-                # (0008, 0104) Code Meaning
-                rad_info.code.append(code[0x0008,0x0104].value)
-                # (0018, 1078) Radiopharmaceutical Start DateTime
-                rad_info.date.append(rad[0x0018,0x1078].value)
-                injection = search_injection_from_info(db, dicom_study, rad_info)
-            if not injection:
-                injection = new_injection(db, dicom_study, rad_info)
-    except:
-        #tqdm.write('Cannot find info on radiopharmaceutical in DICOM')
-        injection = search_injection(db, ds, dicom_study, dicom_series)
-
-    # return injection (could be None)
-    return injection
-
-# -----------------------------------------------------------------------------
-def guess_or_create_acquisition(db, dicom_series, patient):
-
-    try:
-
-        acquisition_date = dicom_series.acquisition_date
-        injection = syd.nearest_injection(db, acquisition_date, patient)
-        acquisition = syd.find_one(db['Acquisition'], date=acquisition_date)
-        if not acquisition:
-            acquisition = new_acquisition(db,dicom_series,acquisition_date,injection)
-    except:
-        print('Except')
-        acquisition_date = dicom_series.acquisition_date
-        acquisition = search_acquisition(db, acquisition_date)
-
-
-
-    return acquisition
-# -----------------------------------------------------------------------------
-def search_injection_from_info(db, dicom_study, rad_info):
-
-    patient_id = dicom_study.patient_id
-    all_rad = syd.find(db['Radionuclide'])
-    rad_names = [ n.name for n in all_rad]
-
-    if len(rad_info.code) != 1:
-        tqdm.write('Error: several radionuclide found. Dont know what to do')
-        return None
-
-    # look for radionuclide name and date
-    rad_code = rad_info.code[0]
-    rad_date = datetime.strptime(rad_info.date[0], '%Y%m%d%H%M%S')
-    s = [str_match(rad_code,n) for n in rad_names]
-    s = np.array(s)
-    i= np.argmax(s)
-    rad_name = rad_names[i]
-
-    # search if injections exist for this patient and this rad
-    radionuclide = syd.find_one(db['Radionuclide'], name = rad_name)
-    rad_info.radionuclide_id = radionuclide.id
-    inj_candidates = syd.find(db['Injection'],
-                              radionuclide_id = radionuclide.id,
-                              patient_id = patient_id)
-    if len(inj_candidates) == 0:
-        return None
-
-    # check date and activity
-    max_time_days = timedelta(1.0) # 1 day # FIXME  <------------------------ options
-    found = None
-    for ic in inj_candidates:
-        d = ic.date
-        if d>rad_date:
-            t = d-rad_date
-        else:
-            t = rad_date-d
-        if t <= max_time_days:
-            act_diff = np.fabs(ic.activity_in_mbq - rad_info.total_dose)
-            found = ic
-            tqdm.write('Timedelta superior to 10 minutes')
-
-    if found:
-        tqdm.write(f'Injection found : {found}')
-        return found
-    else:
-        return None
-
-
-# -----------------------------------------------------------------------------
-def search_injection(db, ds, dicom_study, dicom_series):
-    patient_id = dicom_study.patient_id
-    inj_candidates = syd.find(db['Injection'], patient_id = patient_id)
-    dicom_date = dicom_series.acquisition_date
-
-    # check date is before the dicom
-    found = None
-    for ic in inj_candidates:
-        if ic.date < dicom_date:
-            if found:
-                if ic.date > found.date:
-                    found = ic
-                    #tqdm.write('Several injections may be associated. Ignoring injection')
-            else:
-                found = ic
-
-    if found:
-        tqdm.write(f'Injection found : {found}')
-        return found
-    else:
-        return None
-# -----------------------------------------------------------------------------
-def search_acquisition(db, date):
-    try:
-        acquisition = syd.find_one(db['Acquisition'], date=date)
-        tqdm.write(f'Acquisition found :{acquisition}')
-    except:
-        acquisition = None
-        tqdm.write('No acquisition found')
-    return acquisition
-# -----------------------------------------------------------------------------
-def new_injection(db, dicom_study, rad_info):
-    injection = Box()
-    injection.radionuclide_id = rad_info.radionuclide_id
-    injection.patient_id = dicom_study.patient_id
-    injection.activity_in_mbq = rad_info.total_dose/1e6
-    injection.date = datetime.strptime(rad_info.date[0], '%Y%m%d%H%M%S')
-
-    syd.insert_one(db['Injection'], injection)
-    tqdm.write(f'Insert new injection {injection}')
-    return injection
-# -----------------------------------------------------------------------------
-def new_acquisition(db,dicom_series,date,injection):
-    acquisition = Box()
-    acquisition.injection_id = injection['id']
-    acquisition.date = date
-    acquisition.modality = dicom_series.modality
-
-    syd.insert_one(db['Acquisition'], acquisition)
-    tqdm.write(f'Insert new Acquisition {acquisition}')
-    return acquisition
-
 
 # -----------------------------------------------------------------------------
 def get_dicom_image_info(ds):

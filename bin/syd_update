@@ -53,7 +53,6 @@ def syd_update(db, table_name, id, field, value, create):
     # type ?
     old_value = element[field]
     print('old value type',type(old_value))
-    print('value type',type(value))
 
     if type(old_value) == datetime:
         print('date')
@@ -62,7 +61,27 @@ def syd_update(db, table_name, id, field, value, create):
         except:
             s = f'Error, cannot convert {value} to a date, use "Y-m-d H:M"'
             syd.raise_except(s)
+    elif type(old_value) == int:
+        print('integer')
+        try:
+            value = int(value)
+        except:
+            s = f'Error, cannot convert {value} to a INT'
+            syd.raise_except(s)
+    elif type(old_value) == float:
+        print('float')
+        try:
+            value = float(value)
+        except:
+            s = f'Error, cannot convert {value} to a FLOAT'
+            syd.raise_except(s)
+    elif type(old_value) == str:
+        print('TXT')
+    else:
+        s = f'Error, type {type(old_value)} not supported'
+        syd.raise_except(s)
 
+    print('value type',type(value))
     ## FIXME convert INTEGER REAL TXT DATE only 
 
     print(value)

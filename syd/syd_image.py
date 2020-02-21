@@ -87,7 +87,7 @@ def insert_image_from_dicom(db, dicom_series):
     files = syd.get_dicom_series_files(db, dicom_series)
     if len(files) == 0:
         s = 'Error, no file associated with this dicom serie'
-        raise_except(s)
+        syd.raise_except(s)
 
     # get folder
     folder = dicom_series['folder']

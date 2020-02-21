@@ -21,11 +21,13 @@ def create_listmode_table(db):
     Create Listmode table
     '''
     q = 'CREATE TABLE Listmode (\
-     id INTEGER PRIMARY KEY NOT NULL,\
-     acquisition_id INTEGER NOT NULL,\
-     file_id INTEGER UNIQUE,\
-     FOREIGN KEY (file_id) REFERENCES File (id) on delete cascade,\
-     FOREIGN KEY(acquisition_id) REFERENCES Acquisition(id) on delete cascade\
+    id INTEGER PRIMARY KEY NOT NULL,\
+    acquisition_id INTEGER NOT NULL,\
+    file_id INTEGER UNIQUE,\
+    modality,\
+    content_type TEXT,\
+    FOREIGN KEY (file_id) REFERENCES File (id) on delete cascade,\
+    FOREIGN KEY(acquisition_id) REFERENCES Acquisition(id) on delete cascade\
      )'
     result = db.query(q)
     listmode_table = db['Listmode']
@@ -74,7 +76,6 @@ def insert_listmode_from_file(db, filename, patient):
         print('')
         if end == 'dat':
             date = return_date(filename.name)
-            modality = 'NM'
         elif end == 'I':
             ds = pydicom.read_file(str(filename))
             try:
@@ -83,10 +84,15 @@ def insert_listmode_from_file(db, filename, patient):
                 date = syd.dcm_str_to_date(acquisition_date+acquisition_time)
             except:
                 date = return_date_str(ds[0x0008, 0x002a].value)
-            modality = 'PT'
         else:
             tqdm.write('Date not found on DICOM')
             return 1
+
+        try:
+            modality, content_type = syd.guess_content_type(filename)
+        except:
+            s  = f'Cannot guess content_type'
+            syd.raise_except(s)
 
         # Check if the listmode is already in the file with date and name
         listmode = syd.find(db['Listmode'], date=date)
@@ -98,17 +104,17 @@ def insert_listmode_from_file(db, filename, patient):
                     return {}
 
         # Check if the acquisition exists or not
-        res = check_acquisition(db, date, patient)
+        res = syd.nearest_acquisition(db,modality, date, patient)
         if res is not None: #When an acquisition is found
             a1 = res
         else:  # Creation of the acquisition if it does not exist
-            d1 = nearest_injection(db, date, patient)
+            d1 = syd.nearest_injection(db, date, patient)
             a0 = {'injection_id': d1['id'], 'modality': modality, 'date': date}
             syd.insert_one(db['Acquisition'], a0)
             a1 = syd.find_one(db['Acquisition'], date=a0['date'])
         tqdm.write('Acquisition : {}'.format(a1))
         # Listmode creation then insertion
-        l0 = {'acquisition_id': a1['id'], 'date':date}
+        l0 = {'acquisition_id': a1['id'], 'date':date, 'modality': modality, 'content_type':content_type}
         syd.insert_one(db['Listmode'], l0)
         l1 = syd.find(db['Listmode'], acquisition_id=a1['id'])
         acqui_folder = os.path.join(patient_folder, 'acqui_' + str(a1['id']))
@@ -154,26 +160,7 @@ def check_type(file):
 
     return result
 
-# -----------------------------------------------------------------------------
-def check_acquisition(db,date,patient):
-    injec = nearest_injection(db,date,patient)
-    result = None
-    try:
-        acq = syd.find(db['Acquisition'], injection_id=injec['id'])
-    except:
-        tqdm.write('Cannot find acquisition')
-    if acq != []:
-        min = np.abs(date - acq[0]['date'])
-        for tmp in acq:
-            m = np.abs(date - tmp['date'])
-            if m<= timedelta(1.0/24.0/60.0*1.0):
-                # timedelta usefull for multiple listmode for example tomo + wholebody
-                if m <= min:
-                    min = m
-                    result = tmp
 
-
-    return result
 # -----------------------------------------------------------------------------
 def return_date(filename):
     try:
@@ -183,7 +170,7 @@ def return_date(filename):
             if date.find(a) != -1:
                 return datetime.strptime(date[0:date.find(a) + 10], '%d%m%Y%H%M%S')
     except:
-        print('Filename not long enough')
+        print('Error returning date from filename')
         return datetime(1958, 10, 4, 0, 0, 0)
 
 
@@ -194,13 +181,4 @@ def return_date_str(var_str):
         if var_str.find(a) != -1:
             return datetime.strptime(var_str[0:var_str.find(a) + 14], '%Y%m%d%H%M%S')
 
-# -----------------------------------------------------------------------------
-def nearest_injection(db,date, patient):
-    var=syd.find(db['Injection'], patient_id=patient['id'])
-    min = np.abs(date - var[0]['date'])
-    for tmp in var:
-        m = np.abs(date - tmp['date'])
-        if m <= min:
-            min = m
-            result = tmp
-    return result
+

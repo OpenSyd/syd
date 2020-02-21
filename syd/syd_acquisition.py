@@ -13,7 +13,7 @@ def create_acquisition_table(db):
     q = 'CREATE TABLE Acquisition (\
     id INTEGER PRIMARY KEY NOT NULL,\
     injection_id INTEGER NOT NULL,\
-    modality TEXT,\
+    modality,\
     fov TEXT,\
     FOREIGN KEY(injection_id) REFERENCES Injection(id) on delete cascade\
     )'
