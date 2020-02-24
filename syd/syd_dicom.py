@@ -402,6 +402,10 @@ def insert_dicom_series_from_dataset(db,filename, ds, patient):
     # try to guess acquisition
     acq = guess_or_create_acquisition(db,dicom_series,patient)
     if acq:
+        try:
+            syd.guess_fov(db,acq)
+        except:
+            print('')
         dicom_series.acquisition_id = acq.id
 
     # folder

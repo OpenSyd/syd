@@ -95,7 +95,7 @@ def insert_listmode_from_file(db, filename, patient):
             syd.raise_except(s)
 
         # Check if the listmode is already in the file with date and name
-        listmode = syd.find(db['Listmode'], date=date)
+        listmode = syd.find(db['Listmode'], date=date, content_type=content_type)
         if listmode is not None:
             for l in listmode:
                 file = syd.find_one(db['File'], id=l['file_id'])
@@ -104,14 +104,22 @@ def insert_listmode_from_file(db, filename, patient):
                     return {}
 
         # Check if the acquisition exists or not
-        res = syd.nearest_acquisition(db,modality, date, patient)
+        res = syd.nearest_acquisition(db,  date, patient, modality)
         if res is not None: #When an acquisition is found
             a1 = res
+            try:
+                syd.guess_fov(db, a1)
+            except:
+                tqdm.write(f'Cannot guess fov for acquisition : {a1}')
         else:  # Creation of the acquisition if it does not exist
             d1 = syd.nearest_injection(db, date, patient)
             a0 = {'injection_id': d1['id'], 'modality': modality, 'date': date}
             syd.insert_one(db['Acquisition'], a0)
             a1 = syd.find_one(db['Acquisition'], date=a0['date'])
+            try:
+                syd.guess_fov(db, a1)
+            except:
+                tqdm.write(f'Cannot guess fov for acquisition : {a1}')
         tqdm.write('Acquisition : {}'.format(a1))
         # Listmode creation then insertion
         l0 = {'acquisition_id': a1['id'], 'date':date, 'modality': modality, 'content_type':content_type}

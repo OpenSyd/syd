@@ -7,12 +7,13 @@ from box import Box
 import numpy as np
 from .syd_helpers import *
 import pydicom
+from collections import Counter
 
 
 ### Patient ###
 def guess_or_create_patient(db, ds):
 
-    # tyy to retrieve patient from PatientID tag
+    # try to retrieve patient from PatientID tag
     patient_dicom_id = ds.data_element("PatientID").value
     patient = syd.find_one(db['Patient'], dicom_id=patient_dicom_id)
 
@@ -35,18 +36,18 @@ def guess_or_create_patient(db, ds):
 # -----------------------------------------------------------------------------
 
 ### Acquisition ###
-def nearest_acquisition(db,modality,date,patient):
+def nearest_acquisition(db,date,patient, modality):
     injec = nearest_injection(db,date,patient)
     result = None
     try:
-        acq = syd.find(db['Acquisition'], injection_id=injec['id'], modality = modality)
+        acq = syd.find(db['Acquisition'], injection_id=injec['id'], modality=modality)
     except:
         tqdm.write('Cannot find acquisition')
     if acq != []:
         min = np.abs(date - acq[0]['date'])
         for tmp in acq:
             m = np.abs(date - tmp['date'])
-            if m<= timedelta(1.0/24.0/60.0*1.0):
+            if m<= timedelta(1.0/24.0/60.0*2.0):
                 # timedelta usefull for multiple listmode for example tomo + wholebody
                 if m <= min:
                     min = m
@@ -57,18 +58,17 @@ def nearest_acquisition(db,modality,date,patient):
 # -----------------------------------------------------------------------------
 def guess_or_create_acquisition(db, dicom_series, patient):
 
-    try: #try to found or create acquisition
-        acquisition_date = dicom_series.acquisition_date
-        modality = dicom_series.modality
-        injection = syd.nearest_injection(db, acquisition_date, patient)
-        acquisition = nearest_acquisition(db,modality,acquisition_date,patient)
-        if not acquisition:
-            acquisition = new_acquisition(db,dicom_series,acquisition_date,injection)
+    # try: #try to found or create acquisition
+    acquisition_date = dicom_series.acquisition_date
+    modality = dicom_series.modality
+    injection = syd.nearest_injection(db, acquisition_date, patient)
+    acquisition = nearest_acquisition(db,acquisition_date,patient, modality)
+    if not acquisition:
+        acquisition = new_acquisition(db,dicom_series,acquisition_date,injection)
 
-        print(acquisition)
-    except:
-        s = 'No Acquisition found'
-        syd.raise_except(s)
+    # except:
+    #     s = 'No Acquisition found'
+    #     syd.raise_except(s)
         # print('Except')
         # acquisition_date = dicom_series.acquisition_date
         # try:
@@ -112,6 +112,9 @@ def nearest_injection(db,date, patient):
     min = np.abs(date - var[0]['date'])
     for tmp in var:
         m = np.abs(date - tmp['date'])
+        # if date < tmp['date']:
+        #     tqdm.write(f'Injection {tmp["date"]} is after the wanted date {date}')
+
         if m <= min:
             min = m
             result = tmp
@@ -279,12 +282,25 @@ def guess_content_type(file):
                 else:
                     content_type = 'Other'
 
-            elif modality == 'NM' or modality == 'PT':
-                if tmp.find('LB CE') != -1 or tmp.find('LIGHT') !=-1:
+            elif modality == 'NM':
+                if tmp.find('CE') != -1 or tmp.find('LIGHT') !=-1:
                     content_type = 'Planar'
                 elif tmp.find('TOMO TAP') != -1:
                     content_type = 'Proj'
                 elif tmp.find('RECON') !=-1:
+                    content_type = 'Recon'
+                else:
+                    content_type = 'Other'
+            elif modality == 'PT':
+                if tmp.find('RECOM')!=-1:
+                    content_type = 'Recon'
+                elif tmp.find('Transversal') !=-1 or tmp.find('Rapport')!=-1:
+                    content_type = 'Other'
+                else:
+                    content_type = 'Tomo'
+
+            elif modality == 'OT':
+                if tmp.find('Volumetrix')!=-1:
                     content_type = 'Recon'
                 else:
                     content_type = 'Other'
@@ -303,7 +319,7 @@ def guess_content_type(file):
                 mod = file.name.split('_')
                 modality = 'NM'
                 if mod[0] == 'tomo':
-                    content_type = 'Tomo'
+                    content_type = 'Proj'
                 elif mod[0] == 'wb':
                     content_type = 'Planar'
                 elif mod[0] == 'static':
@@ -315,3 +331,55 @@ def guess_content_type(file):
             s = f"Unknwon Listmode file {file}"
             syd.raise_except(s)
     return modality, content_type
+
+# -----------------------------------------------------------------------------
+
+def guess_fov(db, acquisition):
+    same_study = []
+    same_modality = []
+    same_date = []
+    frame_of_reference_study= []
+    same_for_dicom=[]
+    study = syd.find(db['DicomSeries'], acquisition_id=acquisition['id'])
+    for s in study: # Accessing the frame of reference uid directly from the file for all dicom in the acquisition
+        frame_of_reference_study.append(s['frame_of_reference_uid'])
+
+    acq=syd.find(db['Acquisition'], injection_id=acquisition['injection_id'])
+    acq = [i for i in acq if (acquisition['id'] != i['id'])] # Removing the acquisition given in the parameter
+    for a in acq:
+        dicom_series = syd.find_one(db['DicomSeries'], acquisition_id=a['id'])
+        if dicom_series is not None:
+            if dicom_series['dicom_study_id'] == study[0]['dicom_study_id']:
+                same_study.append(a)
+    for a in same_study:
+        if acquisition['modality'] == a['modality']:
+            same_modality.append(a)
+    for a in same_modality:
+        if np.abs(acquisition['date'] - a['date'])<timedelta(1.0/24.0):
+            same_date.append(a)
+    for a in same_date:
+        dicom_series = syd.find(db['DicomSeries'], acquisition_id = a['id'])
+        for d in dicom_series:
+            if d['frame_of_reference_uid'] in frame_of_reference_study: # taking the FOR from the dico
+                print(d)
+                same_for = a
+                same_for_dicom .append(d)
+                break # stoping at the first dicom found
+
+    for d in same_for_dicom:
+        str = d['series_description']
+        if str.find('FOV1') !=-1 or str.find('FOV 1') !=-1:
+            acquisition['fov'] = 2
+            syd.update_one(db['Acquisition'], acquisition)
+            tqdm.write(f'Update of acquisition :{acquisition}')
+            return {}
+        elif str.find('FOV2') !=-1 or str.find('FOV 2') !=-1:
+            acquisition['fov'] = 1
+            syd.update_one(db['Acquisition'], acquisition)
+            tqdm.write(f'Update of acquisition :{acquisition}')
+            return {}
+        elif str.find('MFOV') !=-1:
+            print('')
+        else:
+            s = f'Cannot update acquisition {acquisition}'
+            syd.raise_except(s)
