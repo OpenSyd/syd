@@ -36,7 +36,7 @@ def create_image_table(db):
     FOREIGN KEY(file_raw_id) REFERENCES File(id) on delete cascade\
     )'
     result = db.query(q)
-    image_table = db['Image']
+    image_table = db['image']
     image_table.create_column('acquisition_date', db.types.datetime)
 
     # define trigger

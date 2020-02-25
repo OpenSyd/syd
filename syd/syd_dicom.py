@@ -115,7 +115,7 @@ def create_dicom_series_table(db):
     FOREIGN KEY (acquisition_id) REFERENCES Acquisition (id) on delete cascade\
     )'
     result = db.query(q)
-    dicom_serie_table = db['DicomSeries']
+    dicom_serie_table = db['dicomseries']
     dicom_serie_table.create_column('acquisition_date', db.types.datetime)
     dicom_serie_table.create_column('reconstruction_date', db.types.datetime)
 

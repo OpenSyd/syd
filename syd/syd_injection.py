@@ -19,7 +19,7 @@ def create_injection_table(db):
     FOREIGN KEY(radionuclide_id) REFERENCES Radionuclide(id)\
     )'
     result = db.query(q)
-    injection_table = db['Injection']
+    injection_table = db['injection']
     injection_table.create_column('date', db.types.datetime)
     injection_table.create_column('calibration_date', db.types.datetime)
     injection_table.create_column('calibration_activity_in_mbq', db.types.float)

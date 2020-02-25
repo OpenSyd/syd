@@ -113,7 +113,7 @@ def insertFullPrintFormat(db):
                   "table_name": table,
                   "format": allColumns}
         formats += [format]
-    syd.insert(db["PrintFormat"], formats)
+    syd.insert(db["printformat"], formats)
 
 # -----------------------------------------------------------------------------
 def load_db_information(db, filename):

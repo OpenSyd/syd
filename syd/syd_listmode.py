@@ -30,7 +30,7 @@ def create_listmode_table(db):
     FOREIGN KEY(acquisition_id) REFERENCES Acquisition(id) on delete cascade\
      )'
     result = db.query(q)
-    listmode_table = db['Listmode']
+    listmode_table = db['listmode']
     listmode_table.create_column('date', db.types.datetime)
 
     # define trigger

@@ -18,7 +18,7 @@ def create_acquisition_table(db):
     FOREIGN KEY(injection_id) REFERENCES Injection(id) on delete cascade\
     )'
     result = db.query(q)
-    acquisition_table = db['Acquisition']
+    acquisition_table = db['acquisition']
     acquisition_table.create_column('date', db.types.datetime)
 # -----------------------------------------------------------------------------
 def find_acquisition(db,injection):

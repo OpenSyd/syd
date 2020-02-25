@@ -125,4 +125,4 @@ def create_radionuclide_table(db):
           'mass_number': 227.0, 'metastable': False, 'half_life_in_hours': 449.23,
           'max_beta_minus_energy_in_kev': 0.0 }]
 
-    syd.insert(db['Radionuclide'], r)
+    syd.insert(db['radionuclide'], r)

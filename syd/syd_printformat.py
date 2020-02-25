@@ -82,5 +82,5 @@ def insert_default_printformat_elements(db):
         
     ]       
 
-    syd.insert(db['PrintFormat'], r)
+    syd.insert(db['printformat'], r)
 
