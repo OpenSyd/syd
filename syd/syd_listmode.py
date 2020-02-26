@@ -59,7 +59,7 @@ def set_listmode_triggers(db):
 # -----------------------------------------------------------------------------
 def insert_listmode_from_folder(db,folder,patient):
     files = list(Path(folder).rglob('*'))
-    tqdm.write('Found {} files/folders in {}'.format(len(files), folder))
+    # tqdm.write('Found {} files/folders in {}'.format(len(files), folder))
 
     pbar = tqdm(total=len(files), leave=False)
     for f in files:
@@ -99,7 +99,9 @@ def insert_listmode_from_file(db, filename, patient):
         if listmode is not None:
             for l in listmode:
                 file = syd.find_one(db['File'], id=l['file_id'])
-                if file['filename'].find(filename.name) != -1:
+                print(file['filename'])
+                print(filename.name)
+                if file['filename'].endswith(filename.name):
                     tqdm.write('Ignoring {} : Listmode already in the db'.format(filename))
                     return {}
 
