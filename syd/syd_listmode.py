@@ -99,8 +99,6 @@ def insert_listmode_from_file(db, filename, patient):
         if listmode is not None:
             for l in listmode:
                 file = syd.find_one(db['File'], id=l['file_id'])
-                print(file['filename'])
-                print(filename.name)
                 if file['filename'].endswith(filename.name):
                     tqdm.write('Ignoring {} : Listmode already in the db'.format(filename))
                     return {}

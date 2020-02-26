@@ -15,6 +15,7 @@ def create_patient_table(db):
     num INTEGER NOT NULL,\
     name TEXT NOT NULL,\
     dicom_id TEXT UNIQUE,\
+    anonymous_id TEXT UNIQUE,\
     sex TEXT)'
     result = db.query(q)
 
