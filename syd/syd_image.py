@@ -8,6 +8,7 @@ import numpy as np
 from .syd_db import *
 import gatetools as gt
 
+
 # -----------------------------------------------------------------------------
 def create_image_table(db):
     '''
@@ -23,6 +24,7 @@ def create_image_table(db):
     patient_id INTEGER NOT NULL,\
     injection_id INTEGER,\
     dicom_series_id INTEGER,\
+    acquisition_id INTEGER,\
     file_mhd_id INTEGER,\
     file_raw_id INTEGER,\
     pixel_type TEXT,\
@@ -33,6 +35,7 @@ def create_image_table(db):
     FOREIGN KEY(injection_id) REFERENCES Injection(id) on delete cascade,\
     FOREIGN KEY(dicom_series_id) REFERENCES DicomSeries(id) on delete cascade,\
     FOREIGN KEY(file_mhd_id) REFERENCES File(id) on delete cascade,\
+    FOREIGN KEY(acquisition_id) REFERENCES Acquisition(id) on delete cascade,\
     FOREIGN KEY(file_raw_id) REFERENCES File(id) on delete cascade\
     )'
     result = db.query(q)
@@ -50,7 +53,6 @@ def create_image_table(db):
     con.close()
 
 
-
 # -----------------------------------------------------------------------------
 def build_image_folder(db, image):
     '''
@@ -58,9 +60,9 @@ def build_image_folder(db, image):
     '''
 
     pname = syd.find_one(db['Patient'], id=image['patient_id'])['name']
-    #date = image['acquisition_date'].strftime('%Y-%m-%d')
-    #modality = image['modality']
-    #folder = build_folder(db, pname, date, modality)
+    # date = image['acquisition_date'].strftime('%Y-%m-%d')
+    # modality = image['modality']
+    # folder = build_folder(db, pname, date, modality)
     folder = pname
     return folder
 
@@ -92,11 +94,12 @@ def insert_image_from_dicom(db, dicom_series):
     # get folder
     folder = dicom_series['folder']
     folder = os.path.join(db.absolute_data_folder, folder)
+    tmp = folder.split('/')
+    tmp[len(tmp)-2] = tmp[len(tmp) - 2].split('_')
     suid = dicom_series['series_uid']
 
     PixelType = itk.ctype('float')
     Dimension = 3
-
 
     namesGenerator = itk.GDCMSeriesFileNames.New()
     namesGenerator.SetUseSeriesDetails(False)
@@ -115,8 +118,7 @@ def insert_image_from_dicom(db, dicom_series):
     # pixel_type (ignored)
     # pixel_type = image.GetPixelIDTypeAsString()
 
-
-    #GetNumberOfComponentsPerPixel
+    # GetNumberOfComponentsPerPixel
 
     # convert: assume only 2 type short for CT and float for everything else
     pixel_type = 'float'
@@ -130,14 +132,14 @@ def insert_image_from_dicom(db, dicom_series):
         castImageFilter.Update()
         itk_image = castImageFilter.GetOutput()
 
-#    else:
-#        pixel_type = 'float'
-#        try:
-#            itk_image = sitk.Cast(itk_image, sitk.sitkFloat32)
-#        except:
-#            s = 'Cannot cast image. Ignoring '+str(dicom_series)
-#            warning(s)
-#            return None
+    #    else:
+    #        pixel_type = 'float'
+    #        try:
+    #            itk_image = sitk.Cast(itk_image, sitk.sitkFloat32)
+    #        except:
+    #            s = 'Cannot cast image. Ignoring '+str(dicom_series)
+    #            warning(s)
+    #            return None
 
     # injection ?
     injid = None
@@ -153,6 +155,7 @@ def insert_image_from_dicom(db, dicom_series):
         'patient_id': dicom_series.dicom_study.patient.id,
         'injection_id': injid,
         'dicom_series_id': dicom_series.id,
+        'acquisition_id': int(tmp[len(tmp)-2][1]),
         'pixel_type': pixel_type,
         'pixel_unit': pixel_unit,
         'frame_of_reference_uid': dicom_series.frame_of_reference_uid,
@@ -213,7 +216,7 @@ def insert_new_image(db, img, itk_image):
     '''
 
     # set the id to None to force a new image
-    img['id']= None
+    img['id'] = None
 
     # insert Image to get the id
     img = syd.insert_one(db['Image'], img)
@@ -224,8 +227,8 @@ def insert_new_image(db, img, itk_image):
         os.makedirs(os.path.join(db.absolute_data_folder, folder))
     modality = img['modality']
     id = img['id']
-    file_mhd = syd.new_file(db, folder, str(id)+'_'+modality+'.mhd')
-    file_raw = syd.new_file(db, folder, str(id)+'_'+modality+'.raw')
+    file_mhd = syd.new_file(db, folder, str(id) + '_' + modality + '.mhd')
+    file_raw = syd.new_file(db, folder, str(id) + '_' + modality + '.raw')
 
     # FIXME check and set image_type
 
