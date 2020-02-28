@@ -83,7 +83,7 @@ new_image = syd.insert_new_image(db, image, itk_image)
 new_image = syd.insert_write_new_image(db, image, itk_image, tags)
 ```
 
-#Test
+# Test
 
 To run unit tests
 
@@ -91,15 +91,15 @@ To run unit tests
 python -m unittest syd_test -v
 ```
 
-#DataBase Structure
+# DataBase Structure
 
 The SYD database is structured as follow :
-	- A Patient table containing the patient information and various id
-	- An Injection table, related to the patient table and containing all information about the injection of a radioisotope. This table uses the Radionuclide table that contains radionuclide properties and which is already pre-filled.
-	- An Acquisition table related to an injection, corresponding to the acquisition of some data with an imaging system. Dicom images and listmode data will refer to an acquisition. This table makes possible chronological display of all acquisitions related to an injection.
-	- A Listmode table containing the listmode data and associated files (see the table File below).
-	- A DicomStudy table containing all the Dicom studies for one patient
-	- A DicomSerie table containing series for one study and linked to one Acquisition. An Acquisition is linked to all the associated DicomSeries and listmode data.
-	- A DicomFile table containing details about the dicom file.
-	- An Image table that groups all images that will be created. Usually stored as .mhd/.raw files.
-	- A File table that store path for all the files included in the database
+- A Patient table containing the patient information and various id
+- An Injection table, related to the patient table and containing all information about the injection of a radioisotope. This table uses the Radionuclide table that contains radionuclide properties and which is already pre-filled.
+- An Acquisition table related to an injection, corresponding to the acquisition of some data with an imaging system. Dicom images and listmode data will refer to an acquisition. This table makes possible chronological display of all acquisitions related to an injection.
+- A Listmode table containing the listmode data and associated files (see the table File below).
+- A DicomStudy table containing all the Dicom studies for one patient
+- A DicomSerie table containing series for one study and linked to one Acquisition. An Acquisition is linked to all the associated DicomSeries and listmode data.
+- A DicomFile table containing details about the dicom file.
+- An Image table that groups all images that will be created. Usually stored as .mhd/.raw files.
+- A File table that store path for all the files included in the database
