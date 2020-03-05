@@ -40,14 +40,14 @@ def nearest_acquisition(db,date,patient, modality):
     injec = nearest_injection(db,date,patient)
     result = None
     try:
-        acq = syd.find(db['Acquisition'], injection_id=injec['id'], modality=modality)
+        acq = syd.find(db['Acquisition'], injection_id=injec['id'])
     except:
         tqdm.write('Cannot find acquisition')
     if acq != []:
         min = np.abs(date - acq[0]['date'])
         for tmp in acq:
             m = np.abs(date - tmp['date'])
-            if m<= timedelta(1.0/24.0/60.0*2.0):
+            if m<= timedelta(1.0/24.0/60.0*5.0):
                 # timedelta usefull for multiple listmode for example tomo + wholebody
                 if m <= min:
                     min = m

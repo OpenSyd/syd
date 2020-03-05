@@ -13,6 +13,7 @@ from functools import reduce
 from operator import attrgetter
 from string import Formatter
 
+
 # -----------------------------------------------------------------------------
 def tabular_get_line_format(db, table_name, format_name, element):
     '''
@@ -30,14 +31,14 @@ def tabular_get_line_format(db, table_name, format_name, element):
             ff = f
 
     if df == None and format_name != 'raw':
-        s = "Cannot find the format '"+format_name+"' in table '"+table_name+"' using 'raw'"
+        s = "Cannot find the format '" + format_name + "' in table '" + table_name + "' using 'raw'"
         syd.warning(s)
         format_name = 'raw'
 
     if format_name == 'raw':
         df = ''
         for k in element:
-            df += '{'+str(k)+'} '
+            df += '{' + str(k) + '} '
 
     sorting_key = ''
     if ff:
@@ -46,9 +47,10 @@ def tabular_get_line_format(db, table_name, format_name, element):
 
     return df, sorting_key
 
+
 # -----------------------------------------------------------------------------
 def get_nested_info(db, field_name):
-    fields = field_name.split('.') #re.findall(r'(\w)\.(\w)', field_name)
+    fields = field_name.split('.')  # re.findall(r'(\w)\.(\w)', field_name)
     a = Box()
     a.table_names = []
     a.tables = []
@@ -62,8 +64,8 @@ def get_nested_info(db, field_name):
             table = None
         a.table_names.append(tname)
         a.tables.append(table)
-        a.field_id_names.append(f+'_id')
-        a.field_format_name += f+'->'
+        a.field_id_names.append(f + '_id')
+        a.field_format_name += f + '->'
 
     a.field_format_name += fields[-1]
     a.field_name = fields[-1]
@@ -84,7 +86,6 @@ def get_sub_element(db, element, tables, field_id_names):
 
 # -----------------------------------------------------------------------------
 def get_sub_elements(db, elements, format_info, subelements):
-
     # format_info.field_format_name,      # study->patient->name
     # format_info.tables,                 # DicomStudy Patient
     # format_info.field_id_names,         # study_id patient_id
@@ -93,7 +94,7 @@ def get_sub_elements(db, elements, format_info, subelements):
     # get al subelements
     current_table = format_info.tables[0]
     current_field_id_name = format_info.field_id_names[0]
-    ids = [ elem[current_field_id_name] for elem in subelements] ## repetition, unique ? FIXME
+    ids = [elem[current_field_id_name] for elem in subelements]  ## repetition, unique ? FIXME
     new_subelements = syd.find(current_table, id=ids)
 
     if len(format_info.tables) == 1:
@@ -106,7 +107,7 @@ def get_sub_elements(db, elements, format_info, subelements):
                 subelements_map[s.id] = '?'
         for elem in elements:
             index = elem[format_info.field_format_name]
-            if index: # because can be None
+            if index:  # because can be None
                 elem[format_info.field_format_name] = subelements_map[index]
             else:
                 elem[format_info.field_format_name] = '?'
@@ -134,19 +135,19 @@ def get_all_nested_info(db, line_format):
     subelements = re.findall(r'{(\w+)\.(.*?)[:\}]', line_format)
     nesteds = []
     for e in subelements:
-        a = get_nested_info(db, e[0]+'.'+e[1])
+        a = get_nested_info(db, e[0] + '.' + e[1])
         nesteds.append(a)
     return nesteds
 
+
 # -----------------------------------------------------------------------------
 def tabular_add_nested_elements(db, table_name, elements, line_format):
-
     # get information about all nesteds (such as patient->name
     fields_info = syd.get_all_nested_info(db, line_format)
 
     for sub in fields_info:
         for elem in elements:
-            elem[sub.field_format_name] = elem[sub.field_id_names[0]] ## FIRST TIME ONLY
+            elem[sub.field_format_name] = elem[sub.field_id_names[0]]  ## FIRST TIME ONLY
         se = get_sub_elements(db, elements, sub, elements)
 
     for sub in fields_info:
@@ -157,7 +158,6 @@ def tabular_add_nested_elements(db, table_name, elements, line_format):
 
 # -----------------------------------------------------------------------------
 def tabular_add_special_fct(db, table_name, elements, line_format):
-
     subelements = re.findall(r'{(.*?)[:\}]', line_format)
 
     for sub in subelements:
@@ -171,21 +171,20 @@ def tabular_add_special_fct(db, table_name, elements, line_format):
 
 # -----------------------------------------------------------------------------
 def tabular_add_abs_filename(db, table_name, elements):
-
     # only for image, dicomstudy, dicomseries, dicomfile
     # image  -> file_mhd_id file_raw_id => file
     # study  -> NO
     # series -> => dicomfile => file_id ; several so only first one or all ?
 
     if table_name == 'DicomSeries':
-        ids = [ e.id for e in elements]
+        ids = [e.id for e in elements]
         dicomfiles = syd.find(db['DicomFile'], dicom_series_id=ids)
 
-        ids = [ df.file_id for df in dicomfiles ]
+        ids = [df.file_id for df in dicomfiles]
         files = syd.find(db['File'], id=ids)
 
-        map_df = {df.dicom_series_id:df for df in dicomfiles} # keep only one
-        map_f = {f.id:f for f in files} # keep only one
+        map_df = {df.dicom_series_id: df for df in dicomfiles}  # keep only one
+        map_f = {f.id: f for f in files}  # keep only one
 
         for e in elements:
             try:
@@ -194,12 +193,12 @@ def tabular_add_abs_filename(db, table_name, elements):
                 e['abs_filename'] = syd.get_file_absolute_filename(db, f)
             except:
                 e['abs_filename'] = 'file_does_not_exist'
-                #print('warning, cannot find', e.id, df.id)
+                # print('warning, cannot find', e.id, df.id)
 
     if table_name == 'DicomFile':
-        ids = [ e.file_id for e in elements]
+        ids = [e.file_id for e in elements]
         files = syd.find(db['File'], id=ids)
-        map_f = {f.id:f for f in files}
+        map_f = {f.id: f for f in files}
         for e in elements:
             try:
                 f = map_f[e.file_id]
@@ -209,9 +208,9 @@ def tabular_add_abs_filename(db, table_name, elements):
                 # print('warning, cannot find', e.id, df.id)
 
     if table_name == 'Image':
-        ids = [ e.file_mhd_id for e in elements]
+        ids = [e.file_mhd_id for e in elements]
         files = syd.find(db['File'], id=ids)
-        map_f = {f.id:f for f in files}
+        map_f = {f.id: f for f in files}
 
         for e in elements:
             try:
@@ -224,7 +223,6 @@ def tabular_add_abs_filename(db, table_name, elements):
 
 # -----------------------------------------------------------------------------
 def tabular_add_nb_dicom_files(db, table_name, elements):
-
     if table_name != 'DicomSeries':
         return
 
@@ -234,22 +232,21 @@ def tabular_add_nb_dicom_files(db, table_name, elements):
 
 
 # -----------------------------------------------------------------------------
-def tabular_add_time_from_inj (db, table_name, elements):
-
+def tabular_add_time_from_inj(db, table_name, elements):
     if table_name != 'DicomSeries' and table_name != 'Image':
         return
 
-    ids = [ e.injection_id for e in elements ]
+    ids = [e.injection_id for e in elements]
     injections = syd.find(db['Injection'], id=ids)
-    map_inj = {inj.id:inj for inj in injections} # keep only one
+    map_inj = {inj.id: inj for inj in injections}  # keep only one
     for e in elements:
         if not e.injection_id in map_inj:
             continue
         inj = map_inj[e.injection_id]
         date1 = inj.date
         date2 = e.acquisition_date
-        #print(date1, date2)
-        e.time_from_inj = date2-date1
+        # print(date1, date2)
+        e.time_from_inj = date2 - date1
 
 
 # -----------------------------------------------------------------------------
@@ -292,6 +289,7 @@ def str_format_map(format_string, mapping):
         text = ''
     return ''.join(output)
 
+
 # -----------------------------------------------------------------------------
 def tabular_str(format_line, elements):
     '''
@@ -300,20 +298,21 @@ def tabular_str(format_line, elements):
 
     # check
     try:
-        #t = format_line.format_map(SafeKey(d))
+        # t = format_line.format_map(SafeKey(d))
         t = str_format_map(format_line, elements[0])
     except BoxKeyError as err:
-        s = "Error while formating "+str(err)+" probably does not exist in this table"
+        s = "Error while formating " + str(err) + " probably does not exist in this table"
         raise_except(s)
 
     s = ''
     for e in elements:
-        #s += format_line.format_map(d)
-        s += str_format_map(format_line, e)+'\n'
+        # s += format_line.format_map(d)
+        s += str_format_map(format_line, e) + '\n'
 
     # remove last element (final break line)
     s = s[:-1]
     return s
+
 
 # -----------------------------------------------------------------------------
 def grep_elements(elements, format_line, grep):
@@ -321,14 +320,14 @@ def grep_elements(elements, format_line, grep):
     Filter elements. Only keep the ones that match grep
     '''
 
-    lines =  [ syd.str_format_map(format_line, elem) for elem in elements]
+    lines = [syd.str_format_map(format_line, elem) for elem in elements]
 
     s = ''
     if len(grep) == 0:
         for l in lines:
-            s += l+'\n'
-        if len(s)>0:
-            s = s[:-1] # remove last break line
+            s += l + '\n'
+        if len(s) > 0:
+            s = s[:-1]  # remove last break line
         return elements, s
 
     for g in grep:
@@ -338,7 +337,7 @@ def grep_elements(elements, format_line, grep):
         if g[0] == '%':
             vgrep = True
             g = g[1:]
-        for e,l in zip(elements, lines):
+        for e, l in zip(elements, lines):
             if re.search(g, l):
                 if not vgrep:
                     kelements.append(e)
@@ -351,11 +350,12 @@ def grep_elements(elements, format_line, grep):
         lines = klines
 
     for l in lines:
-        s += l+'\n'
-    if len(s)>0:
-        s = s[:-1] # remove last break line
+        s += l + '\n'
+    if len(s) > 0:
+        s = s[:-1]  # remove last break line
 
     return elements, s
+
 
 # -----------------------------------------------------------------------------
 def grep(db, table_name, elements, line_format_name='default', grep=[]):
@@ -363,7 +363,7 @@ def grep(db, table_name, elements, line_format_name='default', grep=[]):
     Simple print/grep helper function
     '''
 
-    if len(elements)<1:
+    if len(elements) < 1:
         return elements, ''
 
     # Get line format
@@ -378,5 +378,3 @@ def grep(db, table_name, elements, line_format_name='default', grep=[]):
 
     # return
     return elements, s
-
-
