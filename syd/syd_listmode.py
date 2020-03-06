@@ -42,6 +42,7 @@ def create_listmode_table(db):
     END;')
     con.close()
 
+
 # -----------------------------------------------------------------------------
 def on_listmode_delete(db, x):
     # NOT really used. Kept here for example and display delete message
@@ -51,13 +52,15 @@ def on_listmode_delete(db, x):
 # -----------------------------------------------------------------------------
 def set_listmode_triggers(db):
     con = db.engine.connect()
+
     def t(x):
         on_listmode_delete(db, x)
 
     con.connection.create_function("on_listmode_delete", 1, t)
 
+
 # -----------------------------------------------------------------------------
-def insert_listmode_from_folder(db,folder,patient):
+def insert_listmode_from_folder(db, folder, patient):
     files = list(Path(folder).rglob('*'))
     # tqdm.write('Found {} files/folders in {}'.format(len(files), folder))
 
@@ -67,6 +70,8 @@ def insert_listmode_from_folder(db,folder,patient):
         pbar.update(1)
 
     pbar.close()
+
+
 # -----------------------------------------------------------------------------
 def insert_listmode_from_file(db, filename, patient):
     patient_folder = os.path.join(db.absolute_data_folder, patient['name'])
@@ -81,7 +86,7 @@ def insert_listmode_from_file(db, filename, patient):
             try:
                 acquisition_date = ds.AcquisitionDate
                 acquisition_time = ds.AcquisitionTime
-                date = syd.dcm_str_to_date(acquisition_date+acquisition_time)
+                date = syd.dcm_str_to_date(acquisition_date + acquisition_time)
             except:
                 date = return_date_str(ds[0x0008, 0x002a].value)
         else:
@@ -91,11 +96,11 @@ def insert_listmode_from_file(db, filename, patient):
         try:
             modality, content_type = syd.guess_content_type(filename)
         except:
-            s  = f'Cannot guess content_type'
+            s = f'Cannot guess content_type'
             syd.raise_except(s)
 
         # Check if the listmode is already in the file with date and name
-        listmode = syd.find(db['Listmode'], date=date, content_type=content_type)
+        listmode = syd.find(db['Listmode'], date=date, modality=modality)
         if listmode is not None:
             for l in listmode:
                 file = syd.find_one(db['File'], id=l['file_id'])
@@ -104,8 +109,9 @@ def insert_listmode_from_file(db, filename, patient):
                     return {}
 
         # Check if the acquisition exists or not
-        res = syd.nearest_acquisition(db,  date, patient, modality)
-        if res is not None: #When an acquisition is found
+        res = syd.nearest_acquisition(db, date, patient, t="Listmode", modality=modality, content_type=content_type)
+        print(res)
+        if res is not None:  # When an acquisition is found
             a1 = res
             try:
                 syd.guess_fov(db, a1)
@@ -122,7 +128,7 @@ def insert_listmode_from_file(db, filename, patient):
                 tqdm.write(f'Cannot guess fov for acquisition : {a1}')
         tqdm.write('Acquisition : {}'.format(a1))
         # Listmode creation then insertion
-        l0 = {'acquisition_id': a1['id'], 'date':date, 'modality': modality, 'content_type':content_type}
+        l0 = {'acquisition_id': a1['id'], 'date': date, 'modality': modality, 'content_type': content_type}
         syd.insert_one(db['Listmode'], l0)
         l1 = syd.find(db['Listmode'], acquisition_id=a1['id'])
         acqui_folder = os.path.join(patient_folder, 'acqui_' + str(a1['id']))
@@ -150,7 +156,7 @@ def insert_listmode_from_file(db, filename, patient):
 
 # -----------------------------------------------------------------------------
 def check_type(file):
-    file=str(file.name)
+    file = str(file.name)
     pattern = re.compile("I\d\d")
     if file.endswith(".dat"):
         if file == "fullPatientDetails.dat":
@@ -188,5 +194,3 @@ def return_date_str(var_str):
     for a in annee:
         if var_str.find(a) != -1:
             return datetime.strptime(var_str[0:var_str.find(a) + 14], '%Y%m%d%H%M%S')
-
-
