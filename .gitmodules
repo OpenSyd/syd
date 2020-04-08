@@ -1,3 +1,6 @@
 [submodule "syd_test"]
 	path = syd_test
 	url = https://gitlab.in2p3.fr/OpenSyd/syd_tests.git
+[submodule "syd/syd_algo"]
+	path = syd/syd_algo
+	url = https://github.com/OpenSyd/syd_algo.git
