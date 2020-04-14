@@ -24,6 +24,11 @@ install:
     then pip install itk --pre;
     else pip install itk==$ITK_VERSION;
     fi
+  - mkdir gatetools
+  - git clone https://github.com/OpenGATE/GateTools.git gatetools
+  - cd gatetools
+  - pip install -e .
+  - cd ..
   - pip install -e .
   - pip freeze
 script: 
