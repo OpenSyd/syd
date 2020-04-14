@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import syd
+import sys
 from tqdm import tqdm
 from datetime import datetime
 from datetime import timedelta
@@ -7,7 +8,9 @@ from box import Box
 import numpy as np
 from .syd_helpers import *
 import pydicom
-from collections import Counter
+import difflib
+import itk
+import syd.syd_algo.stitch_image as sti
 
 
 ### Patient ###
@@ -37,52 +40,56 @@ def guess_or_create_patient(db, ds):
 
 ### Acquisition ###
 def nearest_acquisition(db, date, patient, **kwargs):
-    t = kwargs.get('t', None)
-    modality = kwargs.get('modality', None)
-    content_type = kwargs.get('content_type', None)
-    injection = syd.nearest_injection(db, date, patient)
-    if t == 'Listmode':
-        dicom = syd.find(db['DicomSeries'], injection_id=injection['id'])
-        if dicom != []:
-            for d in dicom:
-                print(d['modality'], modality, d['content_type'], content_type)
-                if d['modality'] == modality and d['content_type'] == content_type:
-                    acquisition = syd.find_one(db['Acquisition'], id=d['acquisition_id'])
-                    return acquisition
-        else:  # when no dicom are in the databse
+    tmp = syd.find_one(db['Acquisition'], date=date)
+    if tmp: # if an acquisition already exist no need to find or
+        return tmp
+    else:
+        t = kwargs.get('t', None)
+        modality = kwargs.get('modality', None)
+        content_type = kwargs.get('content_type', None)
+        injection = syd.nearest_injection(db, date, patient)
+
+        if t == 'Listmode':
+            dicom = syd.find(db['DicomSeries'], injection_id=injection['id'])
+            if dicom != []:
+                for d in dicom:
+                    if d['modality'] == modality and d['content_type'] == content_type:
+                        acquisition = syd.find_one(db['Acquisition'], id=d['acquisition_id'])
+                        return acquisition
+            else:  # when no dicom are in the databse
+                result = None
+                try:
+                    acq = syd.find(db['Acquisition'], injection_id=injection['id'])
+                except:
+                    tqdm.write('Cannot find acquisition')
+                if acq != []:
+                    minnimum = np.abs(date - acq[0]['date'])
+                    for tmp in acq:
+                        m = np.abs(date - tmp['date'])
+                        if m <= timedelta(1.0 / 24.0 / 60.0 * 10.0):
+                            # timedelta usefull for multiple listmode for example tomo + wholebody
+                            if m <= minnimum:
+                                minnimum = m
+                                result = tmp
+                    return result
+
+        elif t == 'Dicom':
             result = None
-            try:
-                acq = syd.find(db['Acquisition'], injection_id=injection['id'])
-            except:
-                tqdm.write('Cannot find acquisition')
-            if acq != []:
+            # try:
+            acq = syd.find(db['Acquisition'], injection_id=injection['id'])
+            # except:
+            #     tqdm.write('Cannot find acquisition')
+            if acq:
                 minnimum = np.abs(date - acq[0]['date'])
                 for tmp in acq:
                     m = np.abs(date - tmp['date'])
                     if m <= timedelta(1.0 / 24.0 / 60.0 * 10.0):
                         # timedelta usefull for multiple listmode for example tomo + wholebody
-                        if m <= minnimum:
+                        if m < minnimum:
                             minnimum = m
                             result = tmp
+
                 return result
-
-    elif t == 'Dicom':
-        result = None
-        try:
-            acq = syd.find(db['Acquisition'], injection_id=injection['id'])
-        except:
-            tqdm.write('Cannot find acquisition')
-        if acq != []:
-            minnimum = np.abs(date - acq[0]['date'])
-            for tmp in acq:
-                m = np.abs(date - tmp['date'])
-                if m <= timedelta(1.0 / 24.0 / 60.0 * 10.0):
-                    # timedelta usefull for multiple listmode for example tomo + wholebody
-                    if m <= minnimum:
-                        minnimum = m
-                        result = tmp
-
-            return result
 
 
 # -----------------------------------------------------------------------------
@@ -377,13 +384,17 @@ def guess_fov(db, acquisition):
     for s in study:  # Accessing the frame of reference uid directly from the file for all dicom in the acquisition
         frame_of_reference_study.append(s['frame_of_reference_uid'])
 
+
     acq = syd.find(db['Acquisition'], injection_id=acquisition['injection_id'])
     acq = [i for i in acq if (acquisition['id'] != i['id'])]  # Removing the acquisition given in the parameter
     for a in acq:
         dicom_series = syd.find_one(db['DicomSeries'], acquisition_id=a['id'])
         if dicom_series is not None:
-            if dicom_series['dicom_study_id'] == study[0]['dicom_study_id']:
-                same_study.append(a)
+            try:
+                if dicom_series['dicom_study_id'] == study[0]['dicom_study_id']:
+                    same_study.append(a)
+            except:
+                continue
     for a in same_study:
         if acquisition['modality'] == a['modality']:
             same_modality.append(a)
@@ -394,7 +405,6 @@ def guess_fov(db, acquisition):
         dicom_series = syd.find(db['DicomSeries'], acquisition_id=a['id'])
         for d in dicom_series:
             if d['frame_of_reference_uid'] in frame_of_reference_study:  # taking the FOR from the dico
-                print(d)
                 same_for = a
                 same_for_dicom.append(d)
                 break  # stoping at the first dicom found
@@ -416,3 +426,55 @@ def guess_fov(db, acquisition):
         else:
             s = f'Cannot update acquisition {acquisition}'
             syd.raise_except(s)
+
+
+# -----------------------------------------------------------------------------
+def guess_stitch(db, acquisition):
+    if acquisition['fov'] == '1':
+        tmp = syd.find(db['Acquisition'], fov='2')
+    elif acquisition['fov'] == '2':
+        tmp = syd.find(db['Acquisition'], fov='1')
+    else:
+        tqdm.write(f'Cannot determnied the fov of {acquisition}')
+        return {}
+    injection = syd.find_one(db['Injection'], id=acquisition['injection_id'])
+    patient = syd.find_one(db['Patient'], id=injection['patient_id'])
+    dicom1 = syd.find(db['DicomSeries'], acquisition_id=acquisition['id'])
+    res = []
+    epsilon = 0.1
+    delta = timedelta(1.0 / 24.0 * 2.0)
+    for t in tmp:
+        diff = np.abs(t['date'] - acquisition['date'])
+        if diff < delta:
+            dicom2 = syd.find(db['DicomSeries'], acquisition_id=t['id'])
+            max = 0.0
+            for d1 in dicom1:
+                for d2 in dicom2:
+                    ratio = difflib.SequenceMatcher(None, d1['series_description'], d2['series_description']).ratio()
+                    if max - ratio < epsilon:
+                        max = ratio
+                        r = [d1, d2]
+                res.append(r)
+    for r in res:
+        image1 = syd.find_one(db['Image'], dicom_series_id=r[0]['id'])
+        file1 = syd.find_one(db['File'], id=image1['file_mhd_id'])
+        image2 = syd.find_one(db['Image'], dicom_series_id=r[1]['id'])
+        file2 = syd.find_one(db['File'], id=image2['file_mhd_id'])
+        path1 = os.path.join(db.absolute_data_folder,os.path.join(file1['folder'], file1['filename']))
+        path2 = os.path.join(db.absolute_data_folder,os.path.join(file2['folder'], file2['filename']))
+        im1 = itk.imread(path1)
+        im2 = itk.imread(path2)
+        result = sti.stitch_image(im1, im2, 2, 0)
+        itk.imwrite(result,'./tmp.mhd')
+        if acquisition['fov'] == '1':
+            im = {'patient_id': patient['id'], 'injection_id': injection['id'], 'acquisition_id': acquisition['id'],
+                  'pixel_type': 'float', 'pixel_unit': 'counts', 'modality': acquisition['modality'],
+                  'frame_of_reference_uid': r[0]['frame_of_reference_uid'], 'acquisition_date': acquisition['date']}
+        else:
+            im = {'patient_id': patient['id'], 'injection_id': injection['id'], 'acquisition_id': tmp['id'],
+                  'pixel_type': 'float', 'pixel_unit': 'counts', 'modality': tmp['modality'],
+                  'frame_of_reference_uid': r[0]['frame_of_reference_uid'], 'acquisition_date': tmp['date']}
+        e = syd.insert_write_new_image(db, im, itk.imread('./tmp.mhd'))
+        os.remove('./tmp.mhd')
+        os.remove('./tmp.raw')
+    return res

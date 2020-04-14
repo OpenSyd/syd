@@ -110,7 +110,6 @@ def insert_listmode_from_file(db, filename, patient):
 
         # Check if the acquisition exists or not
         res = syd.nearest_acquisition(db, date, patient, t="Listmode", modality=modality, content_type=content_type)
-        print(res)
         if res is not None:  # When an acquisition is found
             a1 = res
             try:
