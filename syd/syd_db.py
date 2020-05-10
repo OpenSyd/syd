@@ -344,7 +344,7 @@ def sort_elements(elements, sorting_key):
 # -----------------------------------------------------------------------------
 def check_table_name(db, table_name):
     '''
-    Try to guess the table from the given name, retrive the real table name if exist
+    Try to guess the table from the given name, retrieve the real table name if exist
     '''
     tname = syd.guess_table_name(db, table_name)
     if not tname:
