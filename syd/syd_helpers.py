@@ -43,7 +43,19 @@ def str_to_date(str):
     '''
 
     # FIXME -> deal with error
-    date = datetime.datetime.strptime(str, '%Y-%m-%d %H:%M')
+    try:
+        date = datetime.datetime.strptime(str, '%Y-%m-%d %H:%M:%S')
+        return date
+    except:
+        pass
+
+    try:
+        date = datetime.datetime.strptime(str, '%Y-%m-%d %H:%M')
+        return date
+    except:
+        pass
+    s = f'Error, cannot convert {str} to a Y-m-d H:M[:S] date '
+    syd.raise_except(s)
     return date
 
 
