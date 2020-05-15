@@ -6,5 +6,7 @@ db/*
 save_reg_ok/*
 temp/*
 .DS_store
+.idea
+
 
 
