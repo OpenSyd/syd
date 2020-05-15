@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import syd
+import click
+
+# -----------------------------------------------------------------------------
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument('name')
+@click.argument('table')
+@click.argument('view_format')
+@click.option('--db', default='',
+              help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
+def syd_insert_view(db, name, table, view_format):
+    """
+    TODO
+    """
+
+    # open the db
+    db_filename = syd.get_db_filename(db)
+    db = syd.open_db(db_filename)
+
+    # get the list of columns
+    print(name, table, view_format)
+    columns_format = syd.parse_columns_view_format(db, view_format)
+    print(columns_format)
+
+    # TODO check if view already exist
+
+    # create sql query to create the view
+    s = f'CREATE VIEW {name} AS SELECT \n'
+    for col in columns_format:
+        c = columns_format[col]
+        # add artificial empty table for the join
+        c['tables'].append('')
+        a = '.'.join(c['tables'])+c['id']+' as '+col+', \n'
+        # remove last comma
+        s += a
+    s += f'FROM {table}\n'
+    print(s)
+
+    # get list of table
+    tables = set()
+    for col in columns_format:
+        for t in columns_format[col]['tables']:
+            if t != '':
+                tables.add(t)
+    print(tables)
+
+    # add inner join
+
+
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    syd_insert_view()

@@ -42,5 +42,6 @@ setuptools.setup(
         'bin/syd_insert_image_from_dicom',
         'bin/syd_stitch_image',
         'bin/syd_geometrical_mean',
-        'bin/syd_faf_calibration']
+        'bin/syd_faf_calibration',
+        'bin/syd_insert_view',]
 )

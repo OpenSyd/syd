@@ -12,6 +12,7 @@ from .syd_radionuclide import *
 from .syd_dicom import *
 from .syd_file import *
 from .syd_image import *
+from .syd_view import *
 
 from .syd_faf_calibration import *
 from .syd_label import *
