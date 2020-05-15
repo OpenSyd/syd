@@ -56,7 +56,7 @@ def nearest_acquisition(db, date, patient, **kwargs):
                     if d['modality'] == modality and d['content_type'] == content_type:
                         acquisition = syd.find_one(db['Acquisition'], id=d['acquisition_id'])
                         return acquisition
-            else:  # when no dicom are in the databse
+            else:  # when no dicom are in the database
                 result = None
                 try:
                     acq = syd.find(db['Acquisition'], injection_id=injection['id'])
