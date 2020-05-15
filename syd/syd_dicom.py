@@ -211,9 +211,9 @@ def insert_dicom_from_folder(db, folder, patient):
 
 # -----------------------------------------------------------------------------
 def insert_dicom_from_file(db, filename, patient, future_dicom_files=[]):
-    '''
+    """
     Insert or update a dicom from a filename
-    '''
+    """
 
     # read the file
     try:
@@ -384,10 +384,8 @@ def insert_dicom_series_from_dataset(db,filename, ds, patient):
     dicom_series.content_type = content_type
 
     if dicom_series.modality != modality:
-        s = f'Error modality are differents {modality}/{dicom_series.modality}'
+        s = f'Error modality are different {modality} vs {dicom_series.modality}'
         syd.raise_except(s)
-
-
 
     # image size
     image_size, image_spacing = get_dicom_image_info(ds)
@@ -400,7 +398,9 @@ def insert_dicom_series_from_dataset(db,filename, ds, patient):
         dicom_series.injection_id = inj.id
 
     # try to guess acquisition
-    acq = guess_or_create_acquisition(db,dicom_series,patient)
+    if not patient:
+        patient = guess_or_create_patient(db, ds)
+    acq = guess_or_create_acquisition(db, dicom_series, patient)
     if acq:
         try:
             syd.guess_fov(db,acq)
