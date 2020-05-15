@@ -180,8 +180,9 @@ def insert_dicom_from_folder(db, folder, patient):
     pbar = tqdm(total=len(files), leave=False)
     dicoms = []
     future_dicom_files = []
+    lm_files = []
     for f in files:
-        e= syd.check_type(f)
+        e = syd.check_type(f)
         ftype, end = e.split('.')
         tmp = f
         f = str(f)
@@ -189,14 +190,16 @@ def insert_dicom_from_folder(db, folder, patient):
         if (os.path.isdir(f)): continue
         # read the dicom file
         if ftype == 'Listmode':
-            e = syd.insert_listmode_from_file(db, tmp, patient)
-            if e == 1:
-                continue
+            if patient:
+                lm = syd.insert_listmode_from_file(db, tmp, patient)
+                if lm:
+                    lm_files.append(lm)
+            else:
+                print(f'No patient given (use -p option). Ignoring file {f}')
         else:
             d = insert_dicom_from_file(db, f, patient, future_dicom_files)
-
-        if d != {}:
-            dicoms.append(d)
+            if d != {}:
+                dicoms.append(d)
         # update progress bar
         pbar.update(1)
 
@@ -207,7 +210,7 @@ def insert_dicom_from_folder(db, folder, patient):
     dicom_files = insert_future_dicom_files(db, future_dicom_files)
 
     tqdm.write('Insertion of {} DICOM files.'.format(len(dicoms)))
-
+    tqdm.write(f'Insertion of {len(lm_files)} listmode files.')
 
 # -----------------------------------------------------------------------------
 def insert_dicom_from_file(db, filename, patient, future_dicom_files=[]):
@@ -403,7 +406,7 @@ def insert_dicom_series_from_dataset(db,filename, ds, patient):
     acq = guess_or_create_acquisition(db, dicom_series, patient)
     if acq:
         try:
-            syd.guess_fov(db,acq)
+            syd.guess_fov(db, acq)
         except:
             print('')
         dicom_series.acquisition_id = acq.id
