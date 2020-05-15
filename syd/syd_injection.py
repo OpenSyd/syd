@@ -14,7 +14,7 @@ def create_injection_table(db):
     patient_id INTEGER NOT NULL,\
     radionuclide_id INTEGER NOT NULL,\
     activity_in_mbq REAL,\
-    cycle INTEGER,\
+    cycle TEXT,\
     FOREIGN KEY(patient_id) REFERENCES Patient(id) on delete cascade\
     FOREIGN KEY(radionuclide_id) REFERENCES Radionuclide(id)\
     )'
