@@ -284,7 +284,10 @@ def str_format_map(format_string, mapping):
                 text = '?'
             else:
                 format_string = '{{{}{}}}'.format(conversion, format_spec)
-                text = format_string.format(field_value)
+                if not field_value:
+                    text = '?'
+                else:
+                    text = format_string.format(field_value)
         output.append(literal_text + text)
         text = ''
     return ''.join(output)
