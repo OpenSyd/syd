@@ -77,81 +77,86 @@ def insert_listmode_from_file(db, filename, patient):
     patient_folder = os.path.join(db.absolute_data_folder, patient['name'])
     e = check_type(filename)
     ftype, end = e.split('.')
-    if ftype == 'Listmode':
-        print('')
-        if end == 'dat':
-            date = return_date(filename.name)
-        elif end == 'I':
-            ds = pydicom.read_file(str(filename))
-            try:
-                acquisition_date = ds.AcquisitionDate
-                acquisition_time = ds.AcquisitionTime
-                date = syd.dcm_str_to_date(acquisition_date + acquisition_time)
-            except:
-                date = return_date_str(ds[0x0008, 0x002a].value)
-        else:
-            tqdm.write('Date not found on DICOM')
-            return 1
 
-        try:
-            modality, content_type = syd.guess_content_type(filename)
-        except:
-            s = f'Cannot guess content_type'
-            syd.raise_except(s)
-
-        # Check if the listmode is already in the file with date and name
-        listmode = syd.find(db['Listmode'], date=date, modality=modality)
-        if listmode is not None:
-            for l in listmode:
-                file = syd.find_one(db['File'], id=l['file_id'])
-                if file['filename'].endswith(filename.name):
-                    tqdm.write('Ignoring {} : Listmode already in the db'.format(filename))
-                    return {}
-
-        # Check if the acquisition exists or not
-        res = syd.nearest_acquisition(db, date, patient, t="Listmode", modality=modality, content_type=content_type)
-        if res is not None:  # When an acquisition is found
-            a1 = res
-            try:
-                syd.guess_fov(db, a1)
-            except:
-                tqdm.write(f'Cannot guess fov for acquisition : {a1}')
-        else:  # Creation of the acquisition if it does not exist
-            d1 = syd.nearest_injection(db, date, patient)
-            a0 = {'injection_id': d1['id'], 'modality': modality, 'date': date}
-            syd.insert_one(db['Acquisition'], a0)
-            a1 = syd.find_one(db['Acquisition'], date=a0['date'])
-            try:
-                syd.guess_fov(db, a1)
-            except:
-                tqdm.write(f'Cannot guess fov for acquisition : {a1}')
-        tqdm.write('Acquisition : {}'.format(a1))
-        # Listmode creation then insertion
-        l0 = {'acquisition_id': a1['id'], 'date': date, 'modality': modality, 'content_type': content_type}
-        syd.insert_one(db['Listmode'], l0)
-        l1 = syd.find(db['Listmode'], acquisition_id=a1['id'])
-        acqui_folder = os.path.join(patient_folder, 'acqui_' + str(a1['id']))
-        base_filename = 'LM_' + str(l1[len(l1) - 1]['id']) + '_' + str(filename.name)
-        if not os.path.exists(acqui_folder):
-            os.makedirs(acqui_folder)
-        # File creation for the file table
-        afile = Box()
-        afile.folder = acqui_folder
-        afile.filename = base_filename
-        syd.insert_one(db['File'], afile)
-        # Update of listmode to account for the file_id
-        f0 = syd.find_one(db['File'], filename=afile.filename)
-        l2 = {'id': l1[len(l1) - 1]['id'], 'acquisition_id': a1['id'], 'file_id': f0['id']}
-        syd.update_one(db['Listmode'], l2)
-        # Moving the file
-        copy(filename, acqui_folder)
-        old_filename = os.path.join(acqui_folder, filename.name)
-        new_filename = os.path.join(acqui_folder, base_filename)
-        os.rename(old_filename, new_filename)
-
-    else:
+    if ftype != 'Listmode':
         tqdm.write('Ignoring {}: it is not a Listmode'.format(filename))
+        return None
 
+    if end == 'dat':
+        date = return_date(filename.name)
+    elif end == 'I':
+        ds = pydicom.read_file(str(filename))
+        try:
+            acquisition_date = ds.AcquisitionDate
+            acquisition_time = ds.AcquisitionTime
+            date = syd.dcm_str_to_date(acquisition_date + acquisition_time)
+        except:
+            date = return_date_str(ds[0x0008, 0x002a].value)
+    else:
+        tqdm.write('Date not found on DICOM')
+        return None
+
+    try:
+        modality, content_type = syd.guess_content_type(filename)
+    except:
+        s = f'Cannot guess content_type'
+        syd.raise_except(s)
+
+    # Check if the listmode is already in the file with date and name
+    listmode = syd.find(db['Listmode'], date=date, modality=modality)
+    if listmode is not None:
+        for l in listmode:
+            file = syd.find_one(db['File'], id=l['file_id'])
+            if file['filename'].endswith(filename.name):
+                tqdm.write('Ignoring {} : Listmode already in the db'.format(filename))
+                return None
+
+    # Check if the acquisition exists or not
+    res = syd.nearest_acquisition(db, date, patient, t="Listmode", modality=modality, content_type=content_type)
+    if res is not None:  # When an acquisition is found
+        a1 = res
+        try:
+            syd.guess_fov(db, a1)
+        except:
+            tqdm.write(f'Cannot guess fov for acquisition : {a1}')
+    else:  # Creation of the acquisition if it does not exist
+        d1 = syd.nearest_injection(db, date, patient)
+        a0 = {'injection_id': d1['id'], 'modality': modality, 'date': date}
+        syd.insert_one(db['Acquisition'], a0)
+        a1 = syd.find_one(db['Acquisition'], date=a0['date'])
+        try:
+            syd.guess_fov(db, a1)
+        except:
+            tqdm.write(f'Cannot guess fov for acquisition : {a1}')
+    tqdm.write('Acquisition : {}'.format(a1))
+
+    # Listmode creation then insertion
+    l0 = {'acquisition_id': a1['id'], 'date': date, 'modality': modality, 'content_type': content_type}
+    syd.insert_one(db['Listmode'], l0)
+    l1 = syd.find(db['Listmode'], acquisition_id=a1['id'])
+    acqui_folder = os.path.join(patient_folder, 'acqui_' + str(a1['id']))
+    base_filename = 'LM_' + str(l1[len(l1) - 1]['id']) + '_' + str(filename.name)
+    if not os.path.exists(acqui_folder):
+        os.makedirs(acqui_folder)
+    # File creation for the file table
+    afile = Box()
+    afile.folder = acqui_folder
+    afile.filename = base_filename
+    syd.insert_one(db['File'], afile)
+
+    # Update of listmode to account for the file_id
+    f0 = syd.find_one(db['File'], filename=afile.filename)
+    l2 = {'id': l1[len(l1) - 1]['id'], 'acquisition_id': a1['id'], 'file_id': f0['id']}
+    syd.update_one(db['Listmode'], l2)
+
+    # Moving the file
+    copy(filename, acqui_folder)
+    old_filename = os.path.join(acqui_folder, filename.name)
+    new_filename = os.path.join(acqui_folder, base_filename)
+    os.rename(old_filename, new_filename)
+
+    # return create listmode
+    return l2
 
 # -----------------------------------------------------------------------------
 def check_type(file):
