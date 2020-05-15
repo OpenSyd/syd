@@ -352,5 +352,15 @@ def check_table_name(db, table_name):
         exit(0)
     table_name = tname
     return table_name
-    
+
+# -----------------------------------------------------------------------------
+def count(db, table_name):
+    """
+    Return the number of elements in the tables
+    """
+    table_name = check_table_name(db, table_name)
+    s = f'SELECT COUNT(*) c FROM {table_name};'
+    count = db.query(s)
+    for r in count:
+        return int(r['c'])
 
