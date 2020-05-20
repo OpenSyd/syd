@@ -22,7 +22,9 @@ from .syd_printformat import *
 from .syd_acquisition import *
 
 import logging
+
 log = logging.getLogger()
+
 
 # =============================================================================
 # TODO        TODO           TODO           TODO
@@ -35,7 +37,7 @@ log = logging.getLogger()
 
 # -----------------------------------------------------------------------------
 def create_db(filename, folder, overwrite=False):
-    '''
+    """
     Create a new database with given filename and folder.
 
     All default tables are created:
@@ -49,21 +51,21 @@ def create_db(filename, folder, overwrite=False):
     - File
     - Image
     - Listmode
-    - Acquistion
-    '''
+    - Acquisition
+    """
 
     # FIXME check if already exist
-    if (os.path.isdir(filename)):
-        raise RuntimeError(filename+' is a directory')
-    if (os.path.isfile(filename)):
-        if (overwrite):
-            #print('Remove',filename)
+    if os.path.isdir(filename):
+        raise RuntimeError(filename + ' is a directory')
+    if os.path.isfile(filename):
+        if overwrite:
+            # print('Remove',filename)
             os.remove(filename)
         else:
-            raise RuntimeError(filename+' already exist')
+            raise RuntimeError(filename + ' already exist')
 
     # create empty db
-    db = dataset.connect('sqlite:///'+filename, engine_kwargs={'poolclass':sqlalchemy.pool.StaticPool})
+    db = dataset.connect('sqlite:///' + filename, engine_kwargs={'poolclass': sqlalchemy.pool.StaticPool})
     # conn = sqlite3.connect(filename)
     # c = conn.cursor()
     # c.execute('PRAGMA foreign_keys = ON')
@@ -99,21 +101,23 @@ def create_db(filename, folder, overwrite=False):
 
     return db
 
+
 # -----------------------------------------------------------------------------
 def insertFullPrintFormat(db):
-    '''
+    """
     Insert in PrintFormat table all columns for all tables of db
-    '''
+    """
     formats = []
     for table in db.tables:
-        allColumns = ""
+        all_columns = ""
         for column in db[table].table.columns:
-            allColumns += "{" + str(column)[len(table)+1:] + "} "
-        format = {"name": "full",
-                  "table_name": table,
-                  "format": allColumns}
-        formats += [format]
+            all_columns += "{" + str(column)[len(table) + 1:] + "} "
+        the_format = {"name": "full",
+                      "table_name": table,
+                      "format": all_columns}
+        formats += [the_format]
     syd.insert(db["printformat"], formats)
+
 
 # -----------------------------------------------------------------------------
 def load_db_information(db, filename):
@@ -134,39 +138,41 @@ def load_db_information(db, filename):
 
     # add triggers
     set_file_triggers(db)
-    #set_dicom_triggers(db) # not needed
+    # set_dicom_triggers(db) # not needed
+
 
 # -----------------------------------------------------------------------------
 def open_db(filename):
-    '''
+    """
     Open a return a sqlite db
-    '''
+    """
 
     # check if exist
-    if (os.path.isdir(filename)):
+    if os.path.isdir(filename):
         print('Error', filename, ' is a directory')
         exit(0)
-    if (not os.path.isfile(filename)):
+    if not os.path.isfile(filename):
         print('Error', filename, 'does not exist')
         exit(0)
 
     # FIXME -> check data folder exist
 
     # connect to the db
-    db = dataset.connect('sqlite:///'+filename, engine_kwargs={'poolclass':sqlalchemy.pool.StaticPool})
+    db = dataset.connect('sqlite:///' + filename, engine_kwargs={'poolclass': sqlalchemy.pool.StaticPool})
 
     load_db_information(db, filename)
 
     return db
 
+
 # -----------------------------------------------------------------------------
 def get_db_filename(filename):
-    '''
+    """
     If filename is empty, check the environment variable SYD_DB_FILENAME
-    '''
+    """
 
     # check if read filename from environment variable
-    if (filename == ''):
+    if filename == '':
         try:
             filename = os.environ['SYD_DB_FILENAME']
         except:
@@ -178,10 +184,10 @@ def get_db_filename(filename):
 
 # -----------------------------------------------------------------------------
 def insert(table, elements):
-    '''
+    """
     Insert all elements in the given table.
     Elements are given as vector of dictionary or a Box
-    '''
+    """
 
     if not isinstance(elements, list):
         s = "Error, elements is not an array. Maybe use 'syd.insert_one'"
@@ -195,14 +201,16 @@ def insert(table, elements):
                 p['id'] = i
     except Exception as e:
         s = 'cannot insert element: {}\n'.format(p)
+        s += str(e)
         raise_except(s)
     return elements
 
+
 # -----------------------------------------------------------------------------
 def insert_one(table, element):
-    '''
+    """
     Insert one single element in the table.
-    '''
+    """
     element['_table_name_'] = table.name
     elements = [element]
     e = insert(table, elements)
@@ -211,17 +219,18 @@ def insert_one(table, element):
 
 # -----------------------------------------------------------------------------
 def delete_one(table, id):
-    '''
+    """
     Delete one element from the given table
-    '''
+    """
 
     delete(table, [id])
 
+
 # -----------------------------------------------------------------------------
 def delete(table, ids):
-    '''
+    """
     Delete several elements from the given table
-    '''
+    """
 
     if len(ids) == 0: return
 
@@ -235,15 +244,17 @@ def delete(table, ids):
     try:
         table.delete(id=ids)
     except Exception as e:
-        s = 'Error, cannot delete element {} in table {} (maybe it is used in another table ?)'.format(ids, table.name)
+        s = 'Error, cannot delete element {} in table {} (maybe it is used in another table ?)\n'.format(ids,
+                                                                                                         table.name)
+        s += str(e)
         raise_except(s)
 
 
 # -----------------------------------------------------------------------------
 def update_one(table, element):
-    '''
+    """
     Update a single element according to the 'id'
-    '''
+    """
 
     e = syd.find_one(table, id=element['id'])
     if e == None:
@@ -251,7 +262,7 @@ def update_one(table, element):
         raise_except(s)
 
     try:
-        table.update(element, ['id']) ##FIXME
+        table.update(element, ['id'])  ##FIXME
     except:
         s = f'Error while updating table {table.name}, type issue ? \n Element is {element}'
         raise_except(s)
@@ -259,9 +270,9 @@ def update_one(table, element):
 
 # -----------------------------------------------------------------------------
 def update(table, elements):
-    '''
+    """
     Update all elements according to the 'id'
-    '''
+    """
 
     try:
         with table.db as tx:
@@ -274,20 +285,21 @@ def update(table, elements):
 
 # -----------------------------------------------------------------------------
 def find_one(table, **kwargs):
-    '''
+    """
     Retrieve one element from query
-    '''
+    """
     elem = table.find_one(**kwargs)
     if not elem:
         return None
     return Box(elem)
 
+
 # -----------------------------------------------------------------------------
 def find(table, **kwargs):
-    '''
+    """
     Retrieve elements from query. See module Dataset for query.
     Example: syd.find(db['Patient'], name='toto')
-    '''
+    """
     elem = table.find(**kwargs)
     elements = []
     for e in elem:
@@ -295,13 +307,14 @@ def find(table, **kwargs):
 
     return elements
 
+
 # -----------------------------------------------------------------------------
 def find_all(table):
-    '''
+    """
     Retrieve all elements
-    '''
+    """
     syd.log.info('find alll toto iciciciic')
-    #print(syd.log.level)
+    # print(syd.log.level)
 
     elem = table.all()
     elements = []
@@ -313,9 +326,9 @@ def find_all(table):
 
 # -----------------------------------------------------------------------------
 def find_join_one(element, table, field_id):
-    '''
+    """
     Retrieve the join element with id = field_id
-    '''
+    """
     if not element:
         return None
     if field_id in element:
@@ -327,25 +340,26 @@ def find_join_one(element, table, field_id):
         return None
     return Box(elem)
 
+
 # -----------------------------------------------------------------------------
 def sort_elements(elements, sorting_key):
-    '''
+    """
     Sort elements list according to the given field
-    '''
+    """
     try:
-        elements = sorted(elements, key = lambda i:i[sorting_key])
+        elements = sorted(elements, key=lambda i: i[sorting_key])
     except:
-        s = "Cannot sort by '"+sorting_key+"'. Using default sort.";
+        s = "Cannot sort by '" + sorting_key + "'. Using default sort."
         syd.warning(s)
 
     return elements
-        
+
 
 # -----------------------------------------------------------------------------
 def check_table_name(db, table_name):
-    '''
+    """
     Try to guess the table from the given name, retrieve the real table name if exist
-    '''
+    """
     tname = syd.guess_table_name(db, table_name)
     if not tname:
         print('Table {} does not exist. Tables: {}'.format(table_name, db.tables))
@@ -353,14 +367,11 @@ def check_table_name(db, table_name):
     table_name = tname
     return table_name
 
+
 # -----------------------------------------------------------------------------
 def count(db, table_name):
     """
     Return the number of elements in the tables
+    (not really useful)
     """
-    table_name = check_table_name(db, table_name)
-    s = f'SELECT COUNT(*) c FROM {table_name};'
-    count = db.query(s)
-    for r in count:
-        return int(r['c'])
-
+    return db[table_name].count()

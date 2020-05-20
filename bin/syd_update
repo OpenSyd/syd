@@ -8,6 +8,8 @@ from datetime import datetime
 
 # -----------------------------------------------------------------------------
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('table_name')
 @click.argument('id')
@@ -17,13 +19,13 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
 def syd_update(db, table_name, id, field, value, create):
-    '''
+    """
     Update the field value of the given id element in the table.
 
     Warning: id cannot be updated
 
     Warning: if field does not exists, use --create to create it
-    '''
+    """
 
     # open the db
     db_filename = syd.get_db_filename(db)
@@ -35,7 +37,7 @@ def syd_update(db, table_name, id, field, value, create):
 
     # get element
     element = syd.find_one(table, id=id)
-    if element == None:
+    if element is None:
         s = f"Cannot find element id {id} in {table_name}"
         syd.raise_except(s)
     print(element)
@@ -52,7 +54,7 @@ def syd_update(db, table_name, id, field, value, create):
 
     # type ?
     old_value = element[field]
-    #print('old value type',type(old_value))
+    # print('old value type',type(old_value))
 
     if type(old_value) == datetime:
         try:
@@ -73,25 +75,23 @@ def syd_update(db, table_name, id, field, value, create):
             s = f'Error, cannot convert {value} to a FLOAT'
             syd.raise_except(s)
     elif type(old_value) == str:
-        #print('TXT')
+        # print('TXT')
         pass
     else:
         s = f'Error, type {type(old_value)} not supported'
         syd.raise_except(s)
 
-    #print('value type',type(value))
-    ## FIXME convert INTEGER REAL TXT DATE only 
+    # print('value type',type(value))
+    # FIXME convert INTEGER REAL TXT DATE only
 
-    #print(value)
+    # print(value)
 
-    #element.id = 120 # FIXME 
+    # element.id = 120 # FIXME
     element[field] = value
-    syd.update_one(table, element);
+    syd.update_one(table, element)
     print(element)
-    
 
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     syd_update()
-

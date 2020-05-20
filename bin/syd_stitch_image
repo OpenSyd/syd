@@ -13,11 +13,11 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
 def syd_stitch_image(id, tag, db):
-    '''
+    """
     Stitch two images together
 
     ID : list of the 2 image ids
-    '''
+    """
 
     print('NOT YET IMPLEMENTED')
     exit()

@@ -3,10 +3,11 @@
 
 import syd
 import click
-import re
 
 # -----------------------------------------------------------------------------
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('table_name')
 @click.argument('id', nargs=-1)
@@ -15,9 +16,9 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--silent/-s', default=False,
               help='Remove verbose')
 def syd_delete(table_name, id, db, silent):
-    '''
+    """
     Delete a row element from its id
-    '''
+    """
 
     # open the db
     db_filename = syd.get_db_filename(db)
@@ -29,7 +30,8 @@ def syd_delete(table_name, id, db, silent):
         exit(0)
 
     # do nothing if no id
-    if len(id) == 0: return
+    if len(id) == 0:
+        return
 
     # delete
     syd.delete(db[table_name], id)
@@ -42,4 +44,3 @@ def syd_delete(table_name, id, db, silent):
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     syd_delete()
-

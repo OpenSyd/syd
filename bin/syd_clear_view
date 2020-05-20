@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import syd
+import click
+from sqlalchemy import exc
+from box import Box
+
+# -----------------------------------------------------------------------------
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument('name')
+@click.argument('table')
+@click.argument('view_format')
+@click.option('--clear', is_flag=True, help='Remove all views (DANGEROUS)')
+@click.option('--db', default='',
+              help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
+def syd_insert_view(db, name, table, view_format, clear):
+    """
+    Create a SQL view and a description in the table view (used for printing)
+    """
+
+    # open the db
+    db_filename = syd.get_db_filename(db)
+    db = syd.open_db(db_filename)
+
+    # create the table view if not
+    if clear:
+        if 'FormatView' in db.tables:
+            s = f'Drop table FormatView;'
+            db.query(s)
+        s = f"SELECT name FROM sqlite_master WHERE type = 'view';"
+        res = db.query(s)
+        for r in res:
+            s = f"DROP view {r['name']}"
+            print(s)
+            db.query(s)
+        syd.create_format_view_table(db)
+
+    # get the list of columns
+    table = syd.guess_table_name(db, table)
+    columns_format = syd.parse_columns_view_format(db, view_format)
+
+    # check column id
+    # needed because sqlite do not consider up/low case while Box yes
+    for col in columns_format:
+        c = columns_format[col]
+        if len(c.tables) == 0:
+            t = table
+        else:
+            t = c.tables[-1]
+        if c.id not in db[t].columns:
+            s = f"Error, cannot find the column '{c.id}' in the table {t}\n"
+            s += f'Columns are {db[t].columns}'
+            syd.fatal(s)
+
+    # TODO check if view already exist ?
+    name = table+'_'+name
+    s = f'DROP VIEW IF EXISTS {name} ;'
+    db.query(s)
+
+    # create sql query to create the view
+    s = syd.create_view_query_from_format(name, table, columns_format)
+
+    # create the view
+    db.query(s)
+
+    # test the view
+    ts = f"SELECT * from {name}"
+    try:
+        res = db.query(ts)
+        # print(db[name].count())
+        n = 0
+        for r in res:
+            n += 1
+        print(f'View {name} has been created. It has {n} elements')
+    except exc.OperationalError as e:
+        a = f'Error : view error with {ts}\n'
+        a += f'The initial query was \n{s}\n'
+        a += str(e)
+        syd.fatal(a)
+
+    # create/update element in the table FormatView
+    view = syd.find_one(db['FormatView'], view_name = name)
+    updated = True
+    if not view:
+        updated = False
+        view = Box()
+    view.view_name = name
+    view.table_name = table
+    view.format = view_format
+    if updated:
+        syd.update_one(db['FormatView'], view)
+    else:
+        syd.insert_one(db['FormatView'], view)
+
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    syd_insert_view()

@@ -43,5 +43,6 @@ setuptools.setup(
         'bin/syd_stitch_image',
         'bin/syd_geometrical_mean',
         'bin/syd_faf_calibration',
-        'bin/syd_insert_view',]
+        'bin/syd_insert_view',
+        'bin/syd_clear_view']
 )
