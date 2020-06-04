@@ -1,12 +1,13 @@
 /bin/.DS_Store
-/syd/__pycache__/
-/syd.egg-info/
+/syd/__pycache__
+/syd.egg-info
 *~
 db/*
 save_reg_ok/*
 temp/*
 .DS_store
-.idea
+/.idea
+/venv
 
 
 
