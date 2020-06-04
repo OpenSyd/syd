@@ -7,7 +7,7 @@ import syd
 import re
 from tokenize import tokenize, NUMBER
 from io import BytesIO
-from box import Box, BoxKeyError
+from box import Box, BoxKeyError, BoxList
 
 from functools import reduce
 from operator import attrgetter
@@ -358,6 +358,21 @@ def grep_elements(elements, format_line, grep):
         s = s[:-1]  # remove last break line
 
     return elements, s
+
+
+# -----------------------------------------------------------------------------
+def grep_elements(elements, grep):
+    """
+    Filter elements. Only keep the ones that match grep
+    """
+    res = []
+    for g in grep:
+        for e in elements:
+            s = ' '.join(str(v) for v in e.values())
+            if re.search(g, s):
+                res.append(e)
+
+    return res
 
 
 # -----------------------------------------------------------------------------

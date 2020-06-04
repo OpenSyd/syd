@@ -313,9 +313,6 @@ def find_all(table):
     """
     Retrieve all elements
     """
-    syd.log.info('find alll toto iciciciic')
-    # print(syd.log.level)
-
     elem = table.all()
     elements = []
     for e in elem:
