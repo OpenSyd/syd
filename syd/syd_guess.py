@@ -149,6 +149,8 @@ def nearest_injection(db, date, patient):
     var = syd.find(db['Injection'], patient_id=patient['id'])
     min = np.abs(date - var[0]['date'])
     for tmp in var:
+        if not tmp['date']:
+            continue
         m = np.abs(date - tmp['date'])
         # if date < tmp['date']:
         #     tqdm.write(f'Injection {tmp["date"]} is after the wanted date {date}')
@@ -272,6 +274,8 @@ def search_injection(db, ds, dicom_study, dicom_series):
     # check date is before the dicom
     found = None
     for ic in inj_candidates:
+        if not ic.date:
+            continue
         if ic.date < dicom_date:
             if found:
                 if ic.date > found.date:

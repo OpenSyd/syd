@@ -29,12 +29,16 @@ setuptools.setup(
         'tqdm',
         'colored',
         'itk>=5',
-        'python-box'
+        'python-box',
+        'pandas',
+        'xlrd',
+        'tabulate'
       ],
     scripts=[
         'bin/syd_create',
         'bin/syd_info',
         'bin/syd_find',
+        'bin/syd_find2',
         'bin/syd_delete',
         'bin/syd_update',
         'bin/syd_dicom_info',
