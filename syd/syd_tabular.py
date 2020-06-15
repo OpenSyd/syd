@@ -318,7 +318,7 @@ def tabular_str(format_line, elements):
 
 
 # -----------------------------------------------------------------------------
-def grep_elements(elements, format_line, grep):
+def grep_elements_old(elements, format_line, grep):
     '''
     Filter elements. Only keep the ones that match grep
     '''
@@ -365,12 +365,16 @@ def grep_elements(elements, grep):
     """
     Filter elements. Only keep the ones that match grep
     """
+
     res = []
-    for g in grep:
-        for e in elements:
+    for e in elements:
+        keep_it = True
+        for g in grep:
             s = ' '.join(str(v) for v in e.values())
-            if re.search(g, s):
-                res.append(e)
+            if not re.search(g, s):
+                keep_it = False
+        if keep_it:
+            res.append(e)
 
     return res
 
