@@ -28,7 +28,7 @@ log = logging.getLogger()
 
 # =============================================================================
 # TODO        TODO           TODO           TODO
-# rename check_table_name -> guess_table_name with exception
+# rename get_complete_table_name -> guess_table_name with exception
 # logger
 # exception
 # unit tests 
@@ -353,7 +353,7 @@ def sort_elements(elements, sorting_key):
 
 
 # -----------------------------------------------------------------------------
-def check_table_name(db, table_name):
+def get_complete_table_name(db, table_name):
     """
     Try to guess the table from the given name, retrieve the real table name if exist
     """

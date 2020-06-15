@@ -32,7 +32,7 @@ def syd_update(db, table_name, id, field, value, create):
     db = syd.open_db(db_filename)
 
     # check if table exists
-    table_name = syd.check_table_name(db, table_name)
+    table_name = syd.get_complete_table_name(db, table_name)
     table = db[table_name]
 
     # get element
