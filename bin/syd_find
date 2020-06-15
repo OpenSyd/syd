@@ -6,134 +6,126 @@ import click
 import os
 import re
 import logging
-logger=logging.getLogger(__name__)
+from tabulate import tabulate
+import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('table_name')
 @click.argument('grep', nargs=-1)
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
-
-@click.option('--line_format_name', '-f', default='default',
+@click.option('--view_format', '-f', default='default',
               help='Name of the print format')
-
-@click.option('--line_format', '-p', default='',
-              help='Explicit print format')
-
+#@click.option('--line_format', '-p', default='',
+#              help='Explicit print format')
 @click.option('--delete/--no-delete', '-d', default=False,
               help='Delete found elements')
-
 @click.option('--delete_files', is_flag=True,
-              help='(Only for DicomSeries) Delete the associated files but keep the element in the DB.')
-
+              help='(Only for DicomSeries) Delete the associated \
+              files but keep the element in the DB.')
 @click.option('--short/--no-short', '-s', default=False,
               help='If true, only display results id (for piped commands)')
-
-@click.option('--display_ignore', is_flag=True,
-              help='If set, remove %ignore in grep ')
-
 @click.option('--id', '-i', multiple=True,
               help='Only display elements with given id (maybe multiple)')
-
 @click.option('--vv/--no-vv', default=False,
               help='Try to open in VV (only work for Image and DicomSerie)')
-
 @click.option('--labels', '-l', default='', multiple=True,
               help='Add a label to all found elements')
-
 @click.option('--rm_labels', '-rl', default='', multiple=True,
               help='Remove a label to all found elements')
-
 @click.option('--clean_labels', is_flag=True,
               help='Remove all labels to all found elements')
-
-@click.option('--sort', default='',
+@click.option('--sort', default='id',
               help="Sorting key, for example 'acquisition_date'")
-
+@click.option('--reverse-sort', '-r', default=True, is_flag=True,
+              help="Inverse sort")
+@click.option('--filename', '-fn', '--fn', default=False, is_flag=True,
+              help='Print filename (for images, series etc)')
 @syd.add_options(syd.common_options)
 def syd_find(table_name, grep, db,
-             line_format_name, line_format, display_ignore,
+             view_format,
              delete, delete_files,
              short, id, vv, sort,
-             labels, rm_labels, clean_labels,
+             labels, rm_labels, clean_labels, reverse_sort,
+             filename,
              **kwargs):
-    '''
+    """
     Find elements in table.
 
-    grep: filter results. Display results that match all (AND) words given. For OR, use something like "A|B". To use negative grep (vgrep), match elements that do not contains a given words, use %. For example, syd_find patients %toto will filter patient that do not contain the word 'toto'.
+    grep: filter results. Display results that match all (AND) words given.
+    For OR, use something like "A|B". To use negative grep (vgrep),
+    match elements that do not contains a given words, use %.
+    For example, syd_find_old patients %toto will filter patient that do not
+    contain the word 'toto'.
 
-    By default: the word '%ignore' is added to grep. Use --display-ignore to keep printing element with the ignore label.
+    By default: the word '%ignore' is added to grep. Use --display-ignore
+    to keep printing element with the ignore label.
 
-    labels: add or rm labels to all founded elements. Labels can be a list of words separated by space.
+    labels: add or rm labels to all founded elements. Labels can be a list
+     of words separated by space.
 
-    '''
+    """
 
     # logger
     syd.logging_conf(**kwargs)
     #syd.log.setLevel(0) # for debug
-
-    syd.log.info('toto')
 
     # open the db
     db_filename = syd.get_db_filename(db)
     db = syd.open_db(db_filename)
 
     # check table exist
-    table_name = syd.check_table_name(db, table_name)
-    table = db[table_name]
+    table_name = syd.get_complete_table_name(db, table_name)
+    view_format = table_name+'_'+view_format
+    vtable_name = table_name
 
-    # get elements
+    # find view format
+    views = syd.find_all(db['FormatView'])
+    found = False
+    for v in views:
+        if v.table_name == table_name and v.view_name == view_format:
+            vtable_name = v.view_name
+            found = True
+            continue
+    if not found:
+        syd.warning(f"Cannot find the view '{view_format}', using 'raw'")
+
+    # get the elements
+    table = db[vtable_name]
     if len(id) == 0:
         elements = syd.find_all(table)
     else:
         elements = syd.find(table, id=id)
+    syd.log.debug(f'Find table {table_name} with {len(elements)} elements')
 
-    if len(elements) == 0:
+    # grep the elements
+    init_nb = len(elements)
+    if grep:
+        elements = syd.grep_elements(elements, list(grep))
+
+    # only ids ?
+    if short:
+        s = ''
+        for e in elements:
+            s = s + str(e['id']) + ' '
+        print(s)
         exit()
 
-    init_nb = len(elements)
-
-    # get or create the format from the name
-    sorting_key = None
-    if line_format == '':
-        line_format, sorting_key = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
-
-    # complete the elements with sub elements (e.g. patient->name)
-    lf = syd.tabular_add_nested_elements(db, table_name, elements, line_format)
-
-    syd.tabular_add_special_fct(db, table_name, elements, line_format)
-
-    # header: list of fields
-    format_headers = re.findall(r'{(.*?)[:\}]', lf)
-    header = ''
-    for h in format_headers:
-        header += h+' '
-
-    # grep and get str
-    if not display_ignore:
-        grep = list(grep)
-        if not 'ignore' in labels:
-            grep.append('%ignore')
-
-    # sort
-    if (sort):
-        sorting_key = sort
-    if sorting_key != None:
-        elements = syd.sort_elements(elements, sorting_key)
-    elements, s = syd.grep_elements(elements, lf, grep)
-
     # Add labels to elements, update and redo formating
-    if len(elements) > 0 and (len(labels) > 0 or len(rm_labels)>0):
+    if len(elements) > 0 and (len(labels) > 0 or len(rm_labels) > 0):
         ids = [e.id for e in elements]
         elements = syd.find(table, id=ids)
         syd.add_labels(elements, labels)
         syd.rm_labels(elements, rm_labels)
         syd.update(db[table_name], elements)
-        line_format, sk = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
-        lf = syd.tabular_add_nested_elements(db, table_name, elements, line_format)
-        elements, s = syd.grep_elements(elements, lf, grep)
+        if grep:
+            elements = syd.grep_elements(elements, list(grep))
 
     # remove all labels
     if len(elements) > 0 and clean_labels:
@@ -141,21 +133,38 @@ def syd_find(table_name, grep, db,
         elements = syd.find(table, id=ids)
         syd.clean_labels(elements)
         syd.update(db[table_name], elements)
-        line_format, sk = syd.tabular_get_line_format(db, table_name, line_format_name, elements[0])
-        lf = syd.tabular_add_nested_elements(db, table_name, elements, line_format)
-        elements, s = syd.grep_elements(elements, lf, grep)
+        if grep:
+            elements = syd.grep_elements(elements, list(grep))
 
-    # only ids ?
-    if short:
-        s=''
-        for e in elements:
-            s = s+str(e['id'])+' '
-        print(s)
-        exit()
+    # pandas
+    df = pd.DataFrame(elements)
 
-    # print everything
-    print(header)
-    print(s)
+    # add filename if needed
+    if filename:
+        ids = [e.id for e in elements]
+        raw_elements = syd.find(db[table_name], id=ids)
+        filenames=None
+        if table_name == 'Image':
+            filenames = [ syd.get_image_filename(db, e) for e in raw_elements]
+        if table_name == 'DicomSeries':
+            filenames = [ syd.get_dicom_series_absolute_folder(db, e) for e in raw_elements]
+        if table_name == 'File':
+            filenames = [ syd.get_file_absolute_filename(db, e) for e in raw_elements]
+        if table_name == 'DicomFile':
+            filenames = [ syd.get_dicom_file_absolute_filename(db, e) for e in raw_elements]
+        if filenames:
+            df = df.assign(filename=filenames)
+        else:
+            syd.warning(f'Ignoring option --filename')
+
+    # sort
+    if sort not in df.columns:
+        syd.warning(f'Ignoring sort, unknown column {sort}')
+    else:
+        df = df.sort_values(by=[sort], axis='index', ascending=reverse_sort)
+
+    # ----> PRINT <-----
+    print(tabulate(df,  headers='keys', tablefmt='plain'))
 
     # print nb found
     nb = len(elements)
@@ -179,33 +188,34 @@ def syd_find(table_name, grep, db,
         if table_name == 'DicomSeries':
             for e in elements:
                 files = syd.get_dicom_series_files(db, e)
-                if len(files)>1:
+                if len(files) > 1:
                     filenames += ' --sequence '
                 for f in files:
                     filenames += ' ' + syd.get_file_absolute_filename(db, f)
+                # how sort files !?
 
         if table_name == 'DicomFile':
-            fids = [ df['file_id'] for df in elements]
+            fids = [df['file_id'] for df in elements]
             res = syd.find(db['File'], id=fids)
             for f in res:
                 filenames += ' ' + syd.get_file_absolute_filename(db, f)
 
         if filenames != '':
-            os.system('vv '+filenames) # to be changed by subprocess
+            os.system('vv ' + filenames)  # to be changed by subprocess
         else:
             print('vv : no filenames found')
 
     if delete:
         ids = [i['id'] for i in elements]
         syd.delete(db[table_name], ids)
-        print('Delete ',table_name, ids)
+        print('Delete ', table_name, ids)
 
     if delete_files:
         if table_name != 'DicomSeries':
             print('The option --delete_files can only be used with DicomSeries')
             exit
         ids = [i['id'] for i in elements]
-        dicom_files = syd.find(db['DicomFile'], dicom_series_id = ids)
+        dicom_files = syd.find(db['DicomFile'], dicom_series_id=ids)
         ids = [i['file_id'] for i in dicom_files]
         files = syd.find(db['File'], id=ids)
 
@@ -219,12 +229,11 @@ def syd_find(table_name, grep, db,
             try:
                 os.remove(p)
                 print(f'Removing {p}')
-                n = n+1
+                n = n + 1
             except:
                 print(f'[Cannot remove the file {p}, probably it does not exist already]')
 
         print(f'Delete {n}/{len(ids)} files.')
-
 
 
 # -----------------------------------------------------------------------------
