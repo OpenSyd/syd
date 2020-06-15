@@ -7,18 +7,19 @@ import syd
 
 
 # -----------------------------------------------------------------------------
+# noinspection SqlNoDataSourceInspection
 def create_format_view_table(db):
     """
     Create the injection table
     """
 
     # create Injection table
-    q = 'CREATE TABLE FormatView (\
+    q = "CREATE TABLE FormatView (\
     id INTEGER PRIMARY KEY NOT NULL,\
     view_name TEXT NOT NULL UNIQUE,\
     table_name TEXT NOT NULL,\
     format TEXT\
-    )'
+    )"
     db.query(q)
 
 
@@ -128,7 +129,7 @@ def create_view_query_from_format(name, table, columns_format):
                 # the foreign key is tablename_id except for 'Dicom_XXX'
                 tt = t1.lower()
                 if 'dicom' in tt:
-                    tt = 'dicom_'+tt[5:]
+                    tt = 'dicom_' + tt[5:]
                 s += f'INNER JOIN {t1} ON {t1}.id = {t2}.{tt}_id '
                 s += '\n'
                 already_done.append(t1)
@@ -161,7 +162,6 @@ def insert_view(db, name, table, view_format):
             s = f"Error, cannot find the column '{c.id}' in the table {t}\n"
             s += f'Columns are {db[t].columns}'
             syd.raise_except(s)
-
 
     # TODO check if view already exist ?
     name = table + '_' + name
@@ -206,30 +206,43 @@ def insert_view(db, name, table, view_format):
 
 def insert_default_views(db):
     dd = [
-        {   'name': 'default',
-            'table': 'Patient',
-            'format': 'id:3 num:3 name:<20 dicom_id:<10 labels sex '},
+        {'name': 'default',
+         'table': 'Patient',
+         'format': 'id:3 num:3 name:<20 dicom_id:<10 sex labels'},
 
-        {   'name': 'default',
-            'table': 'Radionuclide',
-            'format': 'id:3 name:<10 element:<12 atomic_number=Z:4d \
+        {'name': 'default',
+         'table': 'Radionuclide',
+         'format': 'id:3 name:<10 element:<12 atomic_number=Z:4d \
             mass_number=A:4d metastable=m:2 half_life_in_hours:8.2f \
             max_beta_minus_energy_in_kev=Q:8.2f labels'},
 
-        {   'name': 'default',
-            'table': 'Injection',
-            'format': 'id:4 patient.name=P:<5 \
+        {'name': 'default',
+         'table': 'Injection',
+         'format': 'id:4 patient.name=P:<5 \
             radionuclide.name=rad:5 activity_in_mbq=MBq:8.2f  \
             date cycle labels'},
 
-        {   'name': 'default',
-            'table': 'DicomStudy',
-            'format': 'id:4 patient.name=P:<5 \
-            study_description=dec study_name=S_name labels'},
+        {'name': 'default',
+         'table': 'DicomStudy',
+         'format': 'id:4 patient.name=P:<5 \
+            study_description=descrip study_name labels'},
 
-        {   'name': 'default',
-            'table': 'DicomSeries',
-            'format': 'id acquisition_id=acq_id \
+        {'name': 'default',
+         'table': 'File',
+         'format': 'id:4 patient.name=P:<5 \
+                study_description=descrip study_name labels'},
+
+        {'name': 'default',
+         'table': 'Acquisition',
+         'format': 'id:4 \
+                injection.patient.name=P:<5 injection.cycle=cycle\
+                injection.radionuclide.name=rad \
+                injection.activity_in_mbq=MBq:8.2f \
+                modality date labels'},
+
+        {'name': 'default',
+         'table': 'DicomSeries',
+         'format': 'id acquisition_id=acq_id \
             dicom_study.patient.name=P:<10 injection.radionuclide.name=rad \
             injection.activity_in_mbq=MBq:8.2f \
             injection.cycle=cycle \
@@ -258,5 +271,3 @@ def insert_default_views(db):
     for d in dd:
         txt = insert_view(db, d.name, d.table, d.format)
         print(txt)
-
-
