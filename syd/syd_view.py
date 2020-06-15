@@ -229,8 +229,7 @@ def insert_default_views(db):
 
         {'name': 'default',
          'table': 'File',
-         'format': 'id:4 patient.name=P:<5 \
-                study_description=descrip study_name labels'},
+         'format': 'id:4 folder filename labels'},
 
         {'name': 'default',
          'table': 'Acquisition',
@@ -251,6 +250,21 @@ def insert_default_views(db):
             series_description \
             dicom_study.study_description=study_desc \
             dicom_study.study_name=sname dataset_name labels'},
+
+        {'name': 'default',
+         'table': 'DicomFile',
+         'format': 'id dicom_series.dicom_study.patient.name=P:<10 \
+          dicom_series.modality=modality file_id file.folder=folder file.filename=filename \
+         sop_uid instance_number labels'},
+
+        {'name': 'default',
+         'table': 'Listmode',
+         'format': 'id acquisition.injection.patient.name=P:<5\
+                    content_type=type\
+                    injection.cycle=cycle\
+                    injection.radionuclide.name=rad \
+                    injection.activity_in_mbq=MBq:8.2f \
+                    acquisition.modality acquisition.date labels'},
 
         {
             'name': 'default',
