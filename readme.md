@@ -104,3 +104,11 @@ The SYD database is structured as follow :
 - A DicomFile table containing details about the dicom file.
 - An Image table that groups all images that will be created. Usually stored as .mhd/.raw files.
 - A File table that store path for all the files included in the database
+
+# View
+
+In ```syd_find```, the resulting table of elements is printed with a panda dataframe. The elements are extracted from
+ the database via either the raw elements in the table or via a view. The views are defined in the FormatView table
+  and created with ```syd_clear_view --default``` or database creations. Additional view can be created with the
+   ```syd_insert_view``` command.  
+
