@@ -10,6 +10,7 @@ from tqdm import tqdm
 from .syd_helpers import *
 from .syd_db import *
 from .syd_guess import *
+from .syd_dicom_struct import *
 from shutil import copyfile
 from datetime import datetime
 from datetime import timedelta
@@ -133,10 +134,12 @@ def create_dicom_file_table(db):
     id INTEGER PRIMARY KEY NOT NULL,\
     file_id INTEGER NOT NULL UNIQUE,\
     dicom_series_id INTEGER NOT NULL,\
+    dicom_struct_id INTEGER,\
     sop_uid INTEGER NOT NULL UNIQUE,\
     instance_number INTEGER,\
     FOREIGN KEY (file_id) REFERENCES File (id) on delete cascade,\
-    FOREIGN KEY (dicom_series_id) REFERENCES DicomSeries (id) on delete cascade\
+    FOREIGN KEY (dicom_series_id) REFERENCES DicomSeries (id) on delete cascade,\
+    FOREIGN KEY (dicom_struct_id) REFERENCES DicomStruct (id) on delete cascade\
     )'
     result = db.query(q)
 
@@ -267,11 +270,17 @@ def insert_dicom_from_file(db, filename, patient, future_dicom_files=[]):
 
     if dicom_series is None:
         dicom_series = insert_dicom_series_from_dataset(db, filename, ds, patient)
-        dicom_series = syd.insert_one(db['DicomSeries'], dicom_series)
-        folder_id = 'dicom_' + str(dicom_series.id)
-        dicom_series.folder = os.path.join(dicom_series.folder, folder_id)
-        syd.update_one(db['DicomSeries'], dicom_series)
-        tqdm.write('Insert new DicomSeries {}'.format(dicom_series))
+        if dicom_series.modality != 'RTSTRUCT':
+            dicom_series = syd.insert_one(db['DicomSeries'], dicom_series)
+            folder_id = 'dicom_' + str(dicom_series.id)
+            dicom_series.folder = os.path.join(dicom_series.folder, folder_id)
+            syd.update_one(db['DicomSeries'], dicom_series)
+            tqdm.write('Insert new DicomSeries {}'.format(dicom_series))
+
+        modality = ds.Modality
+        if modality == 'RTSTRUCT':
+            e = syd.insert_struct_from_file(db, filename)
+            return {}
 
         # Insert previous files
         dd = insert_future_dicom_files(db, future_dicom_files)

@@ -20,6 +20,8 @@ from .syd_helpers import *
 from .syd_image import *
 from .syd_printformat import *
 from .syd_acquisition import *
+from .syd_view import *
+from .syd_roi import *
 
 import logging
 
@@ -52,6 +54,8 @@ def create_db(filename, folder, overwrite=False):
     - Image
     - Listmode
     - Acquisition
+    - ROI
+    - View
     """
 
     # FIXME check if already exist
@@ -93,6 +97,10 @@ def create_db(filename, folder, overwrite=False):
     create_image_table(db)
     create_listmode_table(db)
     create_acquisition_table(db)
+    create_dicom_struct_table(db)
+    create_roi_table(db)
+    create_format_view_table(db)
+    insert_default_views(db)
 
     # insert all columns for all tables in printFormat
     insertFullPrintFormat(db)
