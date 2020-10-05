@@ -501,6 +501,39 @@ def insert_dicom_file_from_dataset(db, ds, filename, dicom_series, future_dicom_
         dicom_file.file_id = afile.id
         syd.insert_one(db['DicomFile'], dicom_file)
 
+    # Update dicom_series dates:
+    try:
+        acquisition_date = ds.AcquisitionDate
+        acquisition_time = ds.AcquisitionTime
+    except:
+        try:
+            acquisition_date = ds.InstanceCreationDate
+            acquisition_time = ds.InstanceCreationTime
+        except:
+            acquisition_date = ds.StructureSetDate
+            acquisition_time = ds.StructureSetTime
+
+    try:
+        reconstruction_date = ds.ContentDate
+        reconstruction_time = ds.ContentTime
+    except:
+        reconstruction_date = acquisition_date
+        reconstruction_time = acquisition_time
+
+    acquisition_date = dcm_str_to_date(acquisition_date + ' ' + acquisition_time)
+
+    if len(reconstruction_date) < 8 or len(reconstruction_time) < 6:
+        reconstruction_date = acquisition_date
+    else:
+        reconstruction_date = dcm_str_to_date(reconstruction_date + ' ' + reconstruction_time)
+
+    if (dicom_series.acquisition_date > acquisition_date):
+        dicom_series.acquisition_date = acquisition_date
+        syd.update_one(db['DicomSeries'], dicom_series)
+    if (dicom_series.reconstruction_date > reconstruction_date):
+        dicom_series.reconstruction_date = reconstruction_date
+        syd.update_one(db['DicomSeries'], dicom_series)
+
     # FIXME special case for CT
     if do_it_later:
         f = Box()
