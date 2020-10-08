@@ -295,7 +295,6 @@ def search_injection(db, ds, dicom_study, dicom_series):
 
 ### Modality and content_type ###
 def guess_content_type(file):
-    print(file)
     try:
         dicom = pydicom.read_file(str(file))
     except:

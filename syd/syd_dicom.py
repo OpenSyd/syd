@@ -430,7 +430,6 @@ def insert_dicom_series_from_dataset(db, filename, ds, patient):
 
 # -----------------------------------------------------------------------------
 def build_dicom_series_folder(db, dicom_series):
-    print(dicom_series)
     dicom_study = syd.find_one(db['DicomStudy'], id=dicom_series.dicom_study_id)
     patient_id = dicom_study.patient_id
     pname = syd.find_one(db['Patient'], id=patient_id).name

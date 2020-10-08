@@ -3,6 +3,8 @@
 import dataset
 import os
 from .syd_db import *
+from box import Box
+
 
 # -----------------------------------------------------------------------------
 def create_file_table(db):
@@ -44,9 +46,11 @@ def on_file_delete(db, folder, filename):
 # -----------------------------------------------------------------------------
 def set_file_triggers(db):
     con = db.engine.connect()
+
     # embed the db
     def t(folder, filename):
         on_file_delete(db, folder, filename)
+
     con.connection.create_function("on_file_delete", 2, t)
 
 
@@ -73,8 +77,6 @@ def new_file(db, folder, filename):
     '''
     Create and return a new file
     '''
-    info = { 'folder':folder, 'filename': filename}
+    info = {'folder': folder, 'filename': filename}
     file = syd.insert_one(db['File'], info)
     return file
-
-

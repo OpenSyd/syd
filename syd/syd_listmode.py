@@ -128,7 +128,6 @@ def insert_listmode_from_file(db, filename, patient):
             syd.guess_fov(db, a1)
         except:
             tqdm.write(f'Cannot guess fov for acquisition : {a1}')
-    tqdm.write('Acquisition : {}'.format(a1))
 
     # Listmode creation then insertion
     l0 = {'acquisition_id': a1['id'], 'date': date, 'modality': modality, 'content_type': content_type}

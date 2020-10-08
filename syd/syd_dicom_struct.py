@@ -10,33 +10,31 @@ import itk
 from pathlib import Path
 from box import Box
 from tqdm import tqdm
-from shutil import copy
+from shutil import copyfile
 
 
 # -----------------------------------------------------------------------------
 def create_dicom_struct_table(db):
-    '''
+    """
     Create DicomStruct table
-    '''
+    """
     # create DicomStruct table
     q = 'CREATE TABLE DicomStruct (\
     id INTEGER PRIMARY KEY NOT NULL,\
     dicom_series_id INTEGER NOT NULL,\
-    dicom_file_id INTEGER, \
     frame_of_reference_uid INTEGER,\
     names TEXT,\
     series_uid INTEGER,\
-    FOREIGN KEY(dicom_series_id) REFERENCES DicomSeries(id) on delete cascade,\
-    FOREIGN KEY(dicom_file_id) REFERENCES DicomFile(id) on delete cascade\
+    FOREIGN KEY(dicom_series_id) REFERENCES DicomSeries(id) on delete cascade\
     )'
     result = db.query(q)
 
 
 # -----------------------------------------------------------------------------
 def insert_struct_from_file(db, filename):
-    '''
+    """
     Insert a DicomStruct from a filename
-    '''
+    """
 
     struct = Box()
     try:
@@ -62,7 +60,6 @@ def insert_struct_from_file(db, filename):
     try:
         frame_of_ref = ds.ReferencedFrameOfReferenceSequence[0]
         study = frame_of_ref.RTReferencedStudySequence[0]
-        print(study.RTReferencedSeriesSequence[0].SeriesInstanceUID)
         series_uid = study.RTReferencedSeriesSequence[0].SeriesInstanceUID
     except:
         tqdm.write('Ignoring {}: Cannot read SeriesInstanceUID'.format(Path(filename).name))
@@ -81,8 +78,6 @@ def insert_struct_from_file(db, filename):
                   'frame_of_reference_uid': dicom_serie['frame_of_reference_uid']}
         struct = syd.insert_one(db['DicomStruct'], struct)
         dicom_file = insert_file(db, ds, filename, struct)
-        struct['file_id'] = dicom_file['id']
-        struct = syd.update_one(db['DicomStruct'], struct)
         return struct
 
     else:
@@ -120,7 +115,7 @@ def insert_file(db, ds, filename, struct):
     if not os.path.exists(dst_folder):
         os.makedirs(dst_folder)
     # if not do_it_later:
-    copy(src, dst)
+    copyfile(src, dst)
 
     dicom_file.file_id = afile.id
     dicom_file = syd.insert_one(db['DicomFile'], dicom_file)
@@ -130,9 +125,9 @@ def insert_file(db, ds, filename, struct):
 
 # -----------------------------------------------------------------------------
 def insert_roi_from_struct(db, struct, crop):
-    '''
+    """
     Insert an ROI from a DicomStruct file
-    '''
+    """
 
     roi = []
     series_id = struct['dicom_series_id']
@@ -180,11 +175,15 @@ def insert_roi_from_struct(db, struct, crop):
             output_filename = base_filename + '_' + ''.join(e for e in roiname if e.isalnum()) + '.mhd'
             itk.imwrite(mask, output_filename)
             im = {'patient_id': patient['id'], 'injection_id': injection_id, 'acquisition_id': acquisition_id,
-                  'frame_of_reference_uid': dicom_series['frame_of_reference_uid'], 'modality': 'RTSTRUCT'}
-            e = syd.insert_write_new_image(db, im, itk.imread(output_filename))
-            roi = {'dicom_struct_id': struct['id'], 'image_id': e['id'],
-                   'frame_of_reference_uid': struct['frame_of_reference_uid'], 'names': roiname}
-            e = syd.insert_one(db['ROI'], roi)
+                  'frame_of_reference_uid': dicom_series['frame_of_reference_uid'], 'modality': 'RTSTRUCT',
+                  'labels': None}
+            im = syd.insert_write_new_image(db, im, itk.imread(output_filename))
+            roi = {'dicom_struct_id': struct['id'], 'image_id': im['id'],
+                   'frame_of_reference_uid': struct['frame_of_reference_uid'], 'names': roiname, 'labels': None}
+            roi = syd.insert_one(db['ROI'], roi)
+            im['roi_id'] = roi['id']
+            syd.update_one(db['Image'], im)
+
         except:
             tqdm.write(f'Error in {roiname, aroi}')
     if npbar > 0:
@@ -193,9 +192,9 @@ def insert_roi_from_struct(db, struct, crop):
 
 # -----------------------------------------------------------------------------
 def get_dicom_struct_files(db, struct):
-    '''
+    """
     Return the list of files associated with the struct
-    '''
+    """
     dicom_files = syd.find(db['DicomFile'], dicom_struct_id=struct['id'])
 
     # sort by instance_number
