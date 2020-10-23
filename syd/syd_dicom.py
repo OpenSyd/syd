@@ -188,6 +188,7 @@ def insert_dicom_from_folder(db, folder, patient):
     struct_files = []
     future_dicom_files = []
     lm_files = []
+    d ={}
     for f in files:
         e = syd.check_type(f)
         ftype, end = e.split('.')
