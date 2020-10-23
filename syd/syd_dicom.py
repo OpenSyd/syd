@@ -210,7 +210,11 @@ def insert_dicom_from_folder(db, folder, patient):
             except:
                 tqdm.write('Ignoring{} : not a dicom'.format(Path(f).name))
                 continue
-            modality = ds.Modality
+            try:
+                modality = ds.Modality
+            except:
+                print(f'No modality on this file {f}')
+                continue
             if modality != 'RTSTRUCT':
                 d = insert_dicom_from_file(db, f, patient, future_dicom_files)
             else:
