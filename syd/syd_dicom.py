@@ -184,6 +184,8 @@ def insert_dicom_from_folder(db, folder, patient):
 
     pbar = tqdm(total=len(files), leave=False)
     dicoms = []
+    struct = []
+    struct_files = []
     future_dicom_files = []
     lm_files = []
     for f in files:
@@ -202,7 +204,16 @@ def insert_dicom_from_folder(db, folder, patient):
             else:
                 print(f'No patient given (use -p option). Ignoring file {f}')
         else:
-            d = insert_dicom_from_file(db, f, patient, future_dicom_files)
+            try:
+                ds = pydicom.read_file(f)
+            except:
+                tqdm.write('Ignoring{} : not a dicom'.format(Path(f).name))
+                continue
+            modality = ds.Modality
+            if modality != 'RTSTRUCT':
+                d = insert_dicom_from_file(db, f, patient, future_dicom_files)
+            else:
+                struct_files.append(f)
             if d != {}:
                 dicoms.append(d)
         # update progress bar
@@ -214,8 +225,14 @@ def insert_dicom_from_folder(db, folder, patient):
     # maybe some remaining future files should be inserted
     dicom_files = insert_future_dicom_files(db, future_dicom_files)
 
+    for f in struct_files:
+        e = syd.insert_struct_from_file(db, f)
+        if e != {}:
+            struct.append(e)
+
     tqdm.write('Insertion of {} DICOM files.'.format(len(dicoms)))
     tqdm.write(f'Insertion of {len(lm_files)} listmode files.')
+    tqdm.write(f'Insertion of {len(struct)} DicomStruct files.')
 
 
 # -----------------------------------------------------------------------------
