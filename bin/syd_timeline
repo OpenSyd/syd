@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+
+import syd
+import click
+
+# ------------------------------------------------------------------
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument('patient_id')
+@click.option('--db', default='', help='Db filename (SYD_DB_FILENAME environment variable is used if no filename')
+def timeline(db, patient_id):
+    """
+    PATIENT_ID : The id in a SYD database of a Patient
+    """
+    db_filename = syd.get_db_filename(db)
+    db = syd.open_db(db_filename)
+    res = []
+    patient = syd.find_one(db['Patient'], id=patient_id)
+    if patient is not None:
+        inj = syd.find(db['Injection'], patient_id=patient['id'])
+        inj = syd.sort_elements(inj, 'date')
+        for i in inj:
+            e = syd.find_acquisition(db, i)
+            res.append([i, e])
+        for r in res:
+            print('|-Injection', r[0]['id'], r[0]['date'])
+            for e in r[1]:
+                print('| Acquisition', e['acquisition']['id'], '-->', e['acquisition']['date'], 'Listmode :',
+                      len(e['listmode']), 'DicomSeries :', len(e['dicom_serie']), 'DicomStruct :',
+                      len(e['dicom_struct']))
+            print('|')
+    else:
+        print('Could not find Patient in the database')
+
+
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    timeline()

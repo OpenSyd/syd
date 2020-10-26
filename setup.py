@@ -50,5 +50,6 @@ setuptools.setup(
         'bin/syd_insert_view',
         'bin/syd_clear_view',
         'bin/syd_struct2roi',
-        'bin/syd_get_ct']
+        'bin/syd_get_ct',
+        'bin/syd_timeline']
 )

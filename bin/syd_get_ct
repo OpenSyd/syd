@@ -12,7 +12,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.argument('dicom_id')
 @click.option('--db', default='', help='DB filename (SYD_DB_FILENAME environment variable is used if no filename')
 @click.option('--struct', '-s', default=False, is_flag=True, help='Only if the id is a DicomStruct id in SYD')
-def nm2ct(db, dicom_id, struct):
+def syd_get_ct(db, dicom_id, struct):
     """
     DICOM_ID : The id in a SYD database of the DicomSeries of a PET or a SPECT for the program to find the matching CT
     """
@@ -67,4 +67,4 @@ def nm2ct(db, dicom_id, struct):
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    nm2ct()
+    syd_get_ct()
