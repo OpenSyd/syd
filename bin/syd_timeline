@@ -2,37 +2,54 @@
 
 import syd
 import click
+import os
+import sys
 
 # ------------------------------------------------------------------
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
 @click.command(context_settings=CONTEXT_SETTINGS)
-@click.argument('patient_id')
+@click.option('--patient_id', '-p', default=None, help='Id of a specific patient')
+@click.option('--write', '-w', default=False, is_flag=True, help='Write the output to a file')
 @click.option('--db', default='', help='Db filename (SYD_DB_FILENAME environment variable is used if no filename')
-def timeline(db, patient_id):
-    """
-    PATIENT_ID : The id in a SYD database of a Patient
-    """
+def timeline(db, patient_id, write):
     db_filename = syd.get_db_filename(db)
     db = syd.open_db(db_filename)
-    res = []
-    patient = syd.find_one(db['Patient'], id=patient_id)
-    if patient is not None:
-        inj = syd.find(db['Injection'], patient_id=patient['id'])
+    if write:
+        out = open('out.txt', 'w')
+    else:
+        out = sys.stdout
+    if patient_id is not None:
+        try:
+            patient = syd.find(db['Patient'], id=patient_id)
+        except:
+            print('Could not find patient in the database')
+    else:
+        patient = syd.find_all(db['Patient'])
+
+    for p in patient:
+        res = []
+        print('', file=out)
+        print('|-Patient', p['name'], p['id'], file=out)
+        inj = syd.find(db['Injection'], patient_id=p['id'])
         inj = syd.sort_elements(inj, 'date')
         for i in inj:
             e = syd.find_acquisition(db, i)
             res.append([i, e])
         for r in res:
-            print('|-Injection', r[0]['id'], r[0]['date'])
+            radionuclide = syd.find_one(db['Radionuclide'], id=r[0]['radionuclide_id'])
+            print('|', file=out)
+            print('|----Injection', r[0]['date'], r[0]['id'], radionuclide['name'], file=out)
             for e in r[1]:
-                print('| Acquisition', e['acquisition']['id'], '-->', e['acquisition']['date'], 'Listmode :',
-                      len(e['listmode']), 'DicomSeries :', len(e['dicom_serie']), 'DicomStruct :',
-                      len(e['dicom_struct']))
-            print('|')
-    else:
-        print('Could not find Patient in the database')
+                if r[0] != res[-1][0]:
+                    print('|    |----Acquisition', e['acquisition']['date'], e['acquisition']['id'], '-->' 'Listmode :',
+                          len(e['listmode']), 'DicomSeries :', len(e['dicom_serie']), 'DicomStruct :',
+                          len(e['dicom_struct']), file=out)
+                else:
+                    print('     |----Acquisition', e['acquisition']['date'], e['acquisition']['id'], '-->' 'Listmode :',
+                          len(e['listmode']), 'DicomSeries :', len(e['dicom_serie']), 'DicomStruct :',
+                          len(e['dicom_struct']), file=out)
 
 
 # -----------------------------------------------------------------------------
