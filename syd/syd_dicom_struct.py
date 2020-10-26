@@ -140,7 +140,10 @@ def insert_roi_from_struct(db, struct, crop):
 
     ### Getting the CT image path ###
     image_ct = syd.find_one(db['Image'], dicom_series_id=series_id)
-    file_img = syd.find_one(db['File'], id=image_ct['file_mhd_id'])
+    try:
+        file_img = syd.find_one(db['File'], id=image_ct['file_mhd_id'])
+    except:
+        print('Could not find the CT image in the database')
     filename_img = db.absolute_data_folder + '/' + file_img['folder'] + '/' + file_img['filename']
 
     ### Getting the DicomStruct dicom path ###
