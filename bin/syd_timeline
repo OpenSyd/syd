@@ -48,8 +48,13 @@ def timeline(db, patient_id, write):
                           'DicomStruct :', len(e['dicom_struct']), file=out)
                     print('|    |    |', file=out)
                     for d in e['dicom_serie']:
-                        print('|    |    |----DicomSeries', d['acquisition_date'], 'id :', d['id'],
-                              d['series_description'], file=out)
+                        im = syd.find_one(db['Image'], dicom_series_id=d['id'])
+                        if im is not None:
+                            print('|    |    |----DicomSeries', d['acquisition_date'], 'id :', d['id'],
+                                  d['series_description'], 'Image :', im['id'], file=out)
+                        else:
+                            print('|    |    |----DicomSeries', d['acquisition_date'], 'id :', d['id'],
+                                  d['series_description'], file=out)
 
                 else:
                     print('     |', file=out)
