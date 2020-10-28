@@ -30,8 +30,7 @@ def timeline(db, patient_id, write):
 
     for p in patient:
         res = []
-        print('', file=out)
-        print('|-Patient', p['name'], p['id'], file=out)
+        print('|-Patient', p['name'], 'id :', p['id'], file=out)
         inj = syd.find(db['Injection'], patient_id=p['id'])
         inj = syd.sort_elements(inj, 'date')
         for i in inj:
@@ -40,16 +39,31 @@ def timeline(db, patient_id, write):
         for r in res:
             radionuclide = syd.find_one(db['Radionuclide'], id=r[0]['radionuclide_id'])
             print('|', file=out)
-            print('|----Injection', r[0]['date'], r[0]['id'], radionuclide['name'], file=out)
+            print('|----Injection', r[0]['date'], 'id :', r[0]['id'], radionuclide['name'], file=out)
             for e in r[1]:
                 if r[0] != res[-1][0]:
-                    print('|    |----Acquisition', e['acquisition']['date'], e['acquisition']['id'], '-->' 'Listmode :',
-                          len(e['listmode']), 'DicomSeries :', len(e['dicom_serie']), 'DicomStruct :',
-                          len(e['dicom_struct']), file=out)
+                    print('|    |', file=out)
+                    print('|    |----Acquisition', e['acquisition']['date'], 'id:', e['acquisition']['id'],
+                          '-->' 'Listmode :', len(e['listmode']), 'DicomSeries :', len(e['dicom_serie']),
+                          'DicomStruct :', len(e['dicom_struct']), file=out)
+                    print('|    |    |', file=out)
+                    for d in e['dicom_serie']:
+                        print('|    |    |----DicomSeries', d['acquisition_date'], 'id :', d['id'],
+                              d['series_description'], file=out)
+
                 else:
-                    print('     |----Acquisition', e['acquisition']['date'], e['acquisition']['id'], '-->' 'Listmode :',
-                          len(e['listmode']), 'DicomSeries :', len(e['dicom_serie']), 'DicomStruct :',
-                          len(e['dicom_struct']), file=out)
+                    print('     |', file=out)
+                    print('     |----Acquisition', e['acquisition']['date'], 'id :', e['acquisition']['id'],
+                          '-->' 'Listmode :', len(e['listmode']), 'DicomSeries :', len(e['dicom_serie']),
+                          'DicomStruct :', len(e['dicom_struct']), file=out)
+                    print('     |    |', file=out)
+                    for d in e['dicom_serie']:
+                        print('     |    |----DicomSeries', d['acquisition_date'], 'id :', d['id'],
+                              d['series_description'], file=out)
+        print('', file=out)
+        print('-------------------------------------------------------------------------------------------------------',
+              file=out)
+        print('', file=out)
 
 
 # -----------------------------------------------------------------------------
