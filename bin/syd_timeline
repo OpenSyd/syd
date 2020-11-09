@@ -11,15 +11,10 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.option('--patient_id', '-p', default=None, help='Id of a specific patient')
-@click.option('--write', '-w', default=False, is_flag=True, help='Write the output to a file')
 @click.option('--db', default='', help='Db filename (SYD_DB_FILENAME environment variable is used if no filename')
-def timeline(db, patient_id, write):
+def timeline(db, patient_id):
     db_filename = syd.get_db_filename(db)
     db = syd.open_db(db_filename)
-    if write:
-        out = open('out.txt', 'w')
-    else:
-        out = sys.stdout
     if patient_id is not None:
         try:
             patient = syd.find(db['Patient'], id=patient_id)
@@ -30,7 +25,7 @@ def timeline(db, patient_id, write):
 
     for p in patient:
         res = []
-        print('|-Patient', p['name'], 'id :', p['id'], file=out)
+        print('|-Patient', p['name'], 'id :', p['id'])
         inj = syd.find(db['Injection'], patient_id=p['id'])
         inj = syd.sort_elements(inj, 'date')
         for i in inj:
@@ -38,37 +33,36 @@ def timeline(db, patient_id, write):
             res.append([i, e])
         for r in res:
             radionuclide = syd.find_one(db['Radionuclide'], id=r[0]['radionuclide_id'])
-            print('|', file=out)
-            print('|----Injection', r[0]['date'], 'id :', r[0]['id'], radionuclide['name'], file=out)
+            print('|')
+            print('|----Injection', r[0]['date'], 'id :', r[0]['id'], radionuclide['name'])
             for e in r[1]:
                 if r[0] != res[-1][0]:
-                    print('|    |', file=out)
+                    print('|    |')
                     print('|    |----Acquisition', e['acquisition']['date'], 'id:', e['acquisition']['id'],
                           '-->' 'Listmode :', len(e['listmode']), 'DicomSeries :', len(e['dicom_serie']),
-                          'DicomStruct :', len(e['dicom_struct']), file=out)
-                    print('|    |    |', file=out)
+                          'DicomStruct :', len(e['dicom_struct']))
+                    print('|    |    |')
                     for d in e['dicom_serie']:
                         im = syd.find_one(db['Image'], dicom_series_id=d['id'])
                         if im is not None:
                             print('|    |    |----DicomSeries', d['acquisition_date'], 'id :', d['id'],
-                                  d['series_description'], 'Image :', im['id'], file=out)
+                                  d['series_description'], 'Image :', im['id'])
                         else:
                             print('|    |    |----DicomSeries', d['acquisition_date'], 'id :', d['id'],
-                                  d['series_description'], file=out)
+                                  d['series_description'])
 
                 else:
-                    print('     |', file=out)
+                    print('     |')
                     print('     |----Acquisition', e['acquisition']['date'], 'id :', e['acquisition']['id'],
                           '-->' 'Listmode :', len(e['listmode']), 'DicomSeries :', len(e['dicom_serie']),
-                          'DicomStruct :', len(e['dicom_struct']), file=out)
-                    print('     |    |', file=out)
+                          'DicomStruct :', len(e['dicom_struct']))
+                    print('     |    |')
                     for d in e['dicom_serie']:
                         print('     |    |----DicomSeries', d['acquisition_date'], 'id :', d['id'],
-                              d['series_description'], file=out)
-        print('', file=out)
-        print('-------------------------------------------------------------------------------------------------------',
-              file=out)
-        print('', file=out)
+                              d['series_description'])
+        print('')
+        print('-------------------------------------------------------------------------------------------------------',)
+        print('')
 
 
 # -----------------------------------------------------------------------------
