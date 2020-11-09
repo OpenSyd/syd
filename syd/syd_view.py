@@ -280,6 +280,19 @@ def insert_default_views(db):
             dicom_series.dicom_study.study_description=study_desc \
             dicom_series.dataset_name=dataset labels'},
 
+        {
+            'name': 'default',
+            'table': 'DicomStruct',
+            'format': 'id dicom_series.dicom_study.patient.name=P:<10\
+                dicom_series_id=series\
+                names'},
+
+        {
+            'name': 'default',
+            'table': 'ROI',
+            'format' : 'id dicom_struct_id=struct\
+                image_id=image names'},
+
     ]
     dd = BoxList(dd)
     for d in dd:
