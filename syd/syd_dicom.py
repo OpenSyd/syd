@@ -662,10 +662,8 @@ def get_dicom_file_absolute_filename(db, e):
 
 
 # -----------------------------------------------------------------------------
-def syd_find_ct(db, dicom_id, struct):
+def syd_find_ct(db, dicom_id):
     res = []
-    db_filename = syd.get_db_filename(db)
-    db = syd.open_db(db_filename)
     db_folder = db.absolute_data_folder
     dicom_series = syd.find_one(db['DicomSeries'], id=dicom_id)
     injection = syd.find_one(db['Injection'], id=dicom_series['injection_id'])
@@ -674,8 +672,10 @@ def syd_find_ct(db, dicom_id, struct):
     file = syd.find_one(db['File'], id=dicom_file['file_id'])
     path = db_folder + '/' + file['folder'] + '/' + file['filename']
     ds = pydicom.read_file(path)
-    instance_uid = ds[0x0020, 0x000d].value
-    frame_uid = ds[0x0020, 0x0052].value
+    try:
+        frame_uid = ds[0x0020, 0x0052].value
+    except:
+        return res
     injections = syd.find(db['Injection'], patient_id=patient['id'])
     for i in injections:
         dicoms = syd.find(db['DicomSeries'], injection_id=i['id'])
@@ -697,12 +697,7 @@ def syd_find_ct(db, dicom_id, struct):
                         res.append([d['id'], im['id']])
                     else:
                         res.append([d['id'], 0])
-    if res != []:
-        for r in res:
-            print(f'The CT matching the input is in the DicomSeries Table with the id : {r[0]}')
-            if r[1] != 0:
-                print(f'The CT image is in the database with the id : {r[1]}')
-            else:
-                print('Could not find matching Image in the database')
-    else:
-        print("Cannot find matching CT")
+
+
+    return res
+
