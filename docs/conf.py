@@ -30,7 +30,6 @@ version = ''
 # The full version, including alpha/beta/rc tags
 release = ''
 
-
 # -- General configuration ---------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -75,7 +74,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
 
-
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -88,10 +86,10 @@ html_theme = 'alabaster'
 # documentation.
 #
 html_theme_options = {
-  'analytics_id': "UA-138643878-1",
-  'fixed_sidebar': True,
-  'show_relbar_bottom': True,
-  'logo': 'gate_logo.png',
+    'analytics_id': "UA-138643878-1",
+    'fixed_sidebar': True,
+    'show_relbar_bottom': True,
+    'logo': 'gate_logo.png',
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -114,7 +112,6 @@ html_static_path = ['_static']
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'SYDdoc'
-
 
 # -- Options for LaTeX output ------------------------------------------------
 
@@ -140,9 +137,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'SYD.tex', 'SYD Documentation', 'manual'),
+    (master_doc, 'SYD.tex', 'SYD Documentation', 'SYD Collaboration', 'manual'),
 ]
-
 
 # -- Options for manual page output ------------------------------------------
 
@@ -152,7 +148,6 @@ man_pages = [
     (master_doc, 'syd', 'SYD Documentation',
      [author], 1)
 ]
-
 
 # -- Options for Texinfo output ----------------------------------------------
 
@@ -164,7 +159,6 @@ texinfo_documents = [
      author, 'SYD', 'One line description of project.',
      'Miscellaneous'),
 ]
-
 
 # -- Options for Epub output -------------------------------------------------
 
@@ -182,6 +176,5 @@ epub_title = project
 
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ['search.html']
-
 
 # -- Extension configuration -------------------------------------------------
