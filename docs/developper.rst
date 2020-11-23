@@ -1,5 +1,5 @@
 Developper
-=====
+==========
 
 .. contents:: Table of Contents
    :depth: 15

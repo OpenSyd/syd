@@ -5,8 +5,8 @@ Package Requirements
    :depth: 15
    :local:
 
-Ubuntu 16.04.2
---------------
+Ubuntu
+------
 
 In Terminal, **type** ::
 
