@@ -9,6 +9,7 @@ Test
 ----
 
 To run unit tests. ::
+
     python -m unittest syd_test -v
 
 DataBase Structure
@@ -28,6 +29,6 @@ View
 ----
 
 In **syd_find**, the resulting table of elements is printed with a panda dataframe. The elements are extracted from
- the database via either the raw elements in the table or via a view. The views are defined in the FormatView table
-  and created with **syd_clear_view --default** or database creations. Additional view can be created with the
-   **syd_insert_view** command.
+the database via either the raw elements in the table or via a view. The views are defined in the FormatView table
+and created with **syd_clear_view --default** or database creations. Additional view can be created with the
+**syd_insert_view** command.

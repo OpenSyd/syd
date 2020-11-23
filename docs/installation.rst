@@ -18,7 +18,9 @@ Installing SYD on Linux
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 This section describes the installation procedure of SYD. First clone the git folder with::
+
     git clone --recursive or git submodule update --init
 
 Once the git folder is setup run the command::
+
     pip install -e .
