@@ -74,7 +74,7 @@ def insert_listmode_from_folder(db, folder, patient):
 
 # -----------------------------------------------------------------------------
 def insert_listmode_from_file(db, filename, patient):
-    patient_folder = os.path.join(db.absolute_data_folder, patient['name'])
+    patient_folder = patient['name']
     e = check_type(filename)
     ftype, end = e.split('.')
 
