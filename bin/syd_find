@@ -97,10 +97,10 @@ def syd_find(table_name, grep, db,
         syd.warning(f"Cannot find the view '{view_format}', using 'raw'")
 
     # get the elements
-    if table_name == 'Image':
-        table = db[table_name]
-    else:
-        table = db[vtable_name]
+    #if table_name == 'Image':
+    #    table = db[table_name]
+    #else:
+    table = db[vtable_name]
     if len(id) == 0:
         elements = syd.find_all(table)
     else:
