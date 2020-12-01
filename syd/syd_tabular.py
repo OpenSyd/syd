@@ -371,7 +371,7 @@ def grep_elements(elements, grep):
         keep_it = True
         for g in grep:
             s = ' '.join(str(v) for v in e.values())
-            if not re.search(g, s):
+            if s.find(g) == -1:
                 keep_it = False
         if keep_it:
             res.append(e)

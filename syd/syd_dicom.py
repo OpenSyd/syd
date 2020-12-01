@@ -188,7 +188,7 @@ def insert_dicom_from_folder(db, folder, patient):
     struct_files = []
     future_dicom_files = []
     lm_files = []
-    d ={}
+    d = {}
     for f in files:
         e = syd.check_type(f)
         ftype, end = e.split('.')
@@ -659,3 +659,45 @@ def get_dicom_series_absolute_folder(db, e):
 def get_dicom_file_absolute_filename(db, e):
     file = syd.find_one(db['File'], id=e.file_id)
     return syd.get_file_absolute_filename(db, file)
+
+
+# -----------------------------------------------------------------------------
+def syd_find_ct(db, dicom_id):
+    res = []
+    db_folder = db.absolute_data_folder
+    dicom_series = syd.find_one(db['DicomSeries'], id=dicom_id)
+    injection = syd.find_one(db['Injection'], id=dicom_series['injection_id'])
+    patient = syd.find_one(db['Patient'], id=injection['patient_id'])
+    dicom_file = syd.find_one(db['DicomFile'], dicom_series_id=dicom_series['id'])
+    file = syd.find_one(db['File'], id=dicom_file['file_id'])
+    path = db_folder + '/' + file['folder'] + '/' + file['filename']
+    ds = pydicom.read_file(path)
+    try:
+        frame_uid = ds[0x0020, 0x0052].value
+    except:
+        return res
+    injections = syd.find(db['Injection'], patient_id=patient['id'])
+    for i in injections:
+        dicoms = syd.find(db['DicomSeries'], injection_id=i['id'])
+        for d in dicoms:
+            df = syd.find_one(db['DicomFile'], dicom_series_id=d['id'])
+            f = syd.find_one(db['File'], id=df['file_id'])
+            p = db_folder + '/' + f['folder'] + '/' + f['filename']
+            d_read = pydicom.read_file(p)
+            instance = d_read[0x0020, 0x000d].value
+            try:
+                frame = d_read[0x0020, 0x0052].value
+            except:
+                # print(f'Cannot read the Frame of Reference UID of the Dicom {d.id}')
+                continue
+            if frame == frame_uid:
+                if d['modality'] == 'CT':
+                    im = syd.find_one(db['Image'], dicom_series_id=d['id'])
+                    if im is not None:
+                        res.append([d['id'], im['id']])
+                    else:
+                        res.append([d['id'], 0])
+
+
+    return res
+

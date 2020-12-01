@@ -5,11 +5,13 @@ import click
 
 # -----------------------------------------------------------------------------
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('id')
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
-def syd_struct2roi(id,db):
+def syd_struct2roi(id, db):
     """
     Insert all the ROI from a DicomStruct
     ID : a SYD id
@@ -25,12 +27,13 @@ def syd_struct2roi(id,db):
     if not struct is None:
         roi = syd.find(db['ROI'], dicom_struct_id=struct.id)
         if roi == []:
-            syd.insert_roi_from_struct(db, struct, crop = False)
+            syd.insert_roi_from_struct(db, struct, crop=False)
         else:
             print('The ROI from this DicomStruct are already in the database')
     else:
         print(f'Cannot find the DicomStruct with the id {id}')
         return
+
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':

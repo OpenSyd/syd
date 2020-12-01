@@ -139,7 +139,7 @@ def insert_listmode_from_file(db, filename, patient):
         os.makedirs(acqui_folder)
     # File creation for the file table
     afile = Box()
-    afile.folder = acqui_folder
+    afile.folder = os.path.join(patient['name'], 'acqui_' + str(a1['id']))
     afile.filename = base_filename
     syd.insert_one(db['File'], afile)
 
@@ -156,6 +156,7 @@ def insert_listmode_from_file(db, filename, patient):
 
     # return create listmode
     return l2
+
 
 # -----------------------------------------------------------------------------
 def check_type(file):

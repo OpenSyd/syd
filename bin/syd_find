@@ -22,7 +22,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')
 @click.option('--view_format', '-f', default='default',
               help='Name of the print format')
-#@click.option('--line_format', '-p', default='',
+# @click.option('--line_format', '-p', default='',
 #              help='Explicit print format')
 @click.option('--delete/--no-delete', '-d', default=False,
               help='Delete found elements')
@@ -76,7 +76,7 @@ def syd_find(table_name, grep, db,
 
     # logger
     syd.logging_conf(**kwargs)
-    #syd.log.setLevel(0) # for debug
+    # syd.log.setLevel(0) # for debug
 
     # open the db
     db_filename = syd.get_db_filename(db)
@@ -84,7 +84,7 @@ def syd_find(table_name, grep, db,
 
     # check table exist
     table_name = syd.get_complete_table_name(db, table_name)
-    view_format = table_name+'_'+view_format
+    view_format = table_name + '_' + view_format
     vtable_name = table_name
 
     # find view format
@@ -99,6 +99,9 @@ def syd_find(table_name, grep, db,
         syd.warning(f"Cannot find the view '{view_format}', using 'raw'")
 
     # get the elements
+    #if table_name == 'Image':
+    #    table = db[table_name]
+    #else:
     table = db[vtable_name]
     if len(id) == 0:
         elements = syd.find_all(table)
@@ -145,15 +148,15 @@ def syd_find(table_name, grep, db,
     if filename:
         ids = [e.id for e in elements]
         raw_elements = syd.find(db[table_name], id=ids)
-        filenames=None
+        filenames = None
         if table_name == 'Image':
-            filenames = [ syd.get_image_filename(db, e) for e in raw_elements]
+            filenames = [syd.get_image_filename(db, e) for e in raw_elements]
         if table_name == 'DicomSeries':
-            filenames = [ syd.get_dicom_series_absolute_folder(db, e) for e in raw_elements]
+            filenames = [syd.get_dicom_series_absolute_folder(db, e) for e in raw_elements]
         if table_name == 'File':
-            filenames = [ syd.get_file_absolute_filename(db, e) for e in raw_elements]
+            filenames = [syd.get_file_absolute_filename(db, e) for e in raw_elements]
         if table_name == 'DicomFile':
-            filenames = [ syd.get_dicom_file_absolute_filename(db, e) for e in raw_elements]
+            filenames = [syd.get_dicom_file_absolute_filename(db, e) for e in raw_elements]
         if filenames:
             df = df.assign(filename=filenames)
         else:
@@ -166,7 +169,7 @@ def syd_find(table_name, grep, db,
         df = df.sort_values(by=[sort], axis='index', ascending=reverse_sort)
 
     # ----> PRINT <-----
-    print(tabulate(df,  headers='keys', tablefmt='plain'))
+    print(tabulate(df, headers='keys', tablefmt='plain'))
 
     # print nb found
     nb = len(elements)
@@ -182,15 +185,15 @@ def syd_find(table_name, grep, db,
     print(vv)
     if vv:
         filenames = ''
-
+        ids = [e.id for e in elements]
+        raw_elements = syd.find(db[table_name], id=ids)
         if table_name == 'Image':
-            print(elements)
-            for e in elements:
+            for e in raw_elements:
                 filename = syd.get_image_filename(db, e)
                 filenames = filenames + ' ' + filename
 
         if table_name == 'DicomSeries':
-            for e in elements:
+            for e in raw_elements:
                 files = syd.get_dicom_series_files(db, e)
                 if len(files) > 1:
                     filenames += ' --sequence '
@@ -199,7 +202,7 @@ def syd_find(table_name, grep, db,
                 # how sort files !?
 
         if table_name == 'DicomFile':
-            fids = [df['file_id'] for df in elements]
+            fids = [df['file_id'] for df in raw_elements]
             res = syd.find(db['File'], id=fids)
             for f in res:
                 filenames += ' ' + syd.get_file_absolute_filename(db, f)

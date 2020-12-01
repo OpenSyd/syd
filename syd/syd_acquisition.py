@@ -3,6 +3,7 @@ import dataset
 from datetime import datetime
 import syd
 
+
 # -----------------------------------------------------------------------------
 def create_acquisition_table(db):
     '''
@@ -20,14 +21,20 @@ def create_acquisition_table(db):
     result = db.query(q)
     acquisition_table = db['acquisition']
     acquisition_table.create_column('date', db.types.datetime)
+
+
 # -----------------------------------------------------------------------------
-def find_acquisition(db,injection):
+def find_acquisition(db, injection):
     acquisition = syd.find(db['Acquisition'], injection_id=injection['id'])
     acquisition = syd.sort_elements(acquisition, 'date')
+    struct = []
     elements = []
     for tmp in acquisition:
         listmode = syd.find(db['Listmode'], acquisition_id=tmp['id'])
-        dicom_series = syd.find(db['DicomSeries'], acquisition_id = tmp['id'])
-        el = {'acquisition':tmp, 'listmode':listmode,'dicom_serie':dicom_series}
+        dicom_series = syd.find(db['DicomSeries'], acquisition_id=tmp['id'])
+        for d in dicom_series:
+            dicom_struct = syd.find(db['DicomStruct'], dicom_series_id=d['id'])
+            struct = struct + dicom_struct
+        el = {'acquisition': tmp, 'listmode': listmode, 'dicom_serie': dicom_series, 'dicom_struct': struct}
         elements.append(el)
     return elements
