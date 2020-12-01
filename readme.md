@@ -1,4 +1,5 @@
-[![Documentation Status](https://readthedocs.org/projects/syd/badge/?version=latest)](https://syd.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/syd/badge/?version=latest)](https://syd.readthedocs.io/en/latest/?badge=latest) 
+[![Github Actions](https://github.com/OpenSyd/syd/workflows/CI/badge.svg?branch=master)](https://github.com/OpenSyd/syd/actions)
 
 SYD is a command-line environment and a python toolkit to perform image processing tasks on a database of medical images. It is initially developed to manage SPECT/CT images and perform tasks such as computing activity or integrated activity in various ROIs, in the field of Target Radionuclide Therapy and nuclear medicine.
 
