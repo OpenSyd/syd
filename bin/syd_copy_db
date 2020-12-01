@@ -54,6 +54,7 @@ def syd_copy_db(database, anonymize, output):
     dbi = newDb['Info']
     elements = syd.find(dbi)
     elements[0].image_folder =  os.path.join(output, os.path.basename(db.absolute_data_folder))[len(os.path.dirname(os.path.join(output, os.path.basename(database))))+1:]
+    elements[0].online_repo = "tux.creatis.insa-lyon.fr:/home/baudier/studies/syd/lutathera/"
     syd.update(newDb['Info'], elements)
 
     if anonymize:

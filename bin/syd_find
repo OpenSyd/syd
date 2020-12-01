@@ -47,13 +47,15 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
               help="Inverse sort")
 @click.option('--filename', '-fn', '--fn', default=False, is_flag=True,
               help='Print filename (for images, series etc)')
+@click.option('--wget', '-wget', default=False, is_flag=True,
+              help='Download the output images from the repository')
 @syd.add_options(syd.common_options)
 def syd_find(table_name, grep, db,
              view_format,
              delete, delete_files,
              short, id, vv, sort,
              labels, rm_labels, clean_labels, reverse_sort,
-             filename,
+             filename, wget,
              **kwargs):
     """
     Find elements in table.
@@ -177,10 +179,12 @@ def syd_find(table_name, grep, db,
         print(f'Found {nb}/{init_nb} elements')
 
     # vv ?
+    print(vv)
     if vv:
         filenames = ''
 
         if table_name == 'Image':
+            print(elements)
             for e in elements:
                 filename = syd.get_image_filename(db, e)
                 filenames = filenames + ' ' + filename
@@ -235,6 +239,48 @@ def syd_find(table_name, grep, db,
 
         print(f'Delete {n}/{len(ids)} files.')
 
+    if wget:
+        dbi = db['Info']
+        infos = syd.find(dbi)
+        if "online_repo" in infos[0]:
+            if not "online_id" in infos[0]:
+               online_id = input("No user available to connect to " + infos[0].online_repo + ". Enter your id: ")
+               infos[0].online_id = online_id
+               syd.update(db['Info'], infos)
+            else:
+                online_id = infos[0].online_id
+            online_repo = online_id + "@" + infos[0].online_repo
+            print(online_repo)
+            filenames = []
+
+            if table_name == 'Image':
+                for e in elements:
+                    print(e)
+                    filename = syd.get_image_filename(db, e)
+                    filenames += [filename]
+
+            if table_name == 'DicomSeries':
+                for e in elements:
+                    files = syd.get_dicom_series_files(db, e)
+                    for f in files:
+                        filenames += [syd.get_file_absolute_filename(db, f)]
+
+            if table_name == 'DicomFile':
+                fids = [df['file_id'] for df in elements]
+                res = syd.find(db['File'], id=fids)
+                for f in res:
+                    filenames += [syd.get_file_absolute_filename(db, f)]
+
+            if table_name == 'File':
+                for e in elements:
+                    filenames += [syd.get_file_absolute_filename(db, e)]
+            print(filenames)
+
+
+
+
+        else:
+            print(f'Cannot download the file. The online repository is not available in database.')
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
