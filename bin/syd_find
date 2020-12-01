@@ -182,14 +182,15 @@ def syd_find(table_name, grep, db,
     # vv ?
     if vv:
         filenames = ''
-
+        ids = [e.id for e in elements]
+        raw_elements = syd.find(db[table_name], id=ids)
         if table_name == 'Image':
-            for e in elements:
+            for e in raw_elements:
                 filename = syd.get_image_filename(db, e)
                 filenames = filenames + ' ' + filename
 
         if table_name == 'DicomSeries':
-            for e in elements:
+            for e in raw_elements:
                 files = syd.get_dicom_series_files(db, e)
                 if len(files) > 1:
                     filenames += ' --sequence '
@@ -198,7 +199,7 @@ def syd_find(table_name, grep, db,
                 # how sort files !?
 
         if table_name == 'DicomFile':
-            fids = [df['file_id'] for df in elements]
+            fids = [df['file_id'] for df in raw_elements]
             res = syd.find(db['File'], id=fids)
             for f in res:
                 filenames += ' ' + syd.get_file_absolute_filename(db, f)
