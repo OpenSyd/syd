@@ -36,7 +36,7 @@ def create_image_table(db):
     FOREIGN KEY(patient_id) REFERENCES Patient(id) on delete cascade,\
     FOREIGN KEY(injection_id) REFERENCES Injection(id) on delete cascade,\
     FOREIGN KEY(dicom_series_id) REFERENCES DicomSeries(id) on delete cascade,\
-    FOREIGN KEY(roi_id) REFERENCES ROI(id) on delete cascade,\
+    FOREIGN KEY(roi_id) REFERENCES Roi(id) on delete cascade,\
     FOREIGN KEY(file_mhd_id) REFERENCES File(id) on delete cascade,\
     FOREIGN KEY(acquisition_id) REFERENCES Acquisition(id) on delete cascade,\
     FOREIGN KEY(file_raw_id) REFERENCES File(id) on delete cascade\

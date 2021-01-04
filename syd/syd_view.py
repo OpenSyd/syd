@@ -130,7 +130,14 @@ def create_view_query_from_format(name, table, columns_format):
                 tt = t1.lower()
                 if 'dicom' in tt:
                     tt = 'dicom_' + tt[5:]
-                s += f'INNER JOIN {t1} ON {t1}.id = {t2}.{tt}_id '
+                if t1 == 'DicomSeries' and table == 'Image':
+                    s += f'LEFT JOIN {t1} ON {t1}.id = {t2}.{tt}_id '
+                elif t1 == 'Roi' and table == 'Image':
+                    s += f'LEFT JOIN {t1} ON {t1}.id = {t2}.{tt}_id '
+                elif t1 == 'DicomStudy' and table == 'Image':
+                    s += f'LEFT JOIN {t1} ON {t1}.id = {t2}.{tt}_id '
+                else:
+                    s += f'INNER JOIN {t1} ON {t1}.id = {t2}.{tt}_id '
                 s += '\n'
                 already_done.append(t1)
     return s
@@ -265,6 +272,19 @@ def insert_default_views(db):
                     injection.radionuclide.name=rad \
                     injection.activity_in_mbq=MBq:8.2f \
                     acquisition.modality acquisition.date labels'},
+        {
+            'name': 'default',
+            'table': 'DicomStruct',
+            'format': 'id dicom_series.dicom_study.patient.name=P:<10\
+                dicom_series_id=series\
+                names'},
+
+        {
+            'name': 'default',
+            'table': 'Roi',
+            'format' : 'id dicom_struct_id=struct\
+                image_id=image names'},
+
 
         {
             'name': 'default',
@@ -278,20 +298,8 @@ def insert_default_views(db):
             pixel_type pixel_unit \
             dicom_series.series_description=desc \
             dicom_series.dicom_study.study_description=study_desc \
-            dicom_series.dataset_name=dataset labels'},
-
-        {
-            'name': 'default',
-            'table': 'DicomStruct',
-            'format': 'id dicom_series.dicom_study.patient.name=P:<10\
-                dicom_series_id=series\
-                names'},
-
-        {
-            'name': 'default',
-            'table': 'ROI',
-            'format' : 'id dicom_struct_id=struct\
-                image_id=image names'},
+            dicom_series.dataset_name=dataset labels \
+            roi_id roi.dicom_struct_id=struct'},
 
     ]
     dd = BoxList(dd)

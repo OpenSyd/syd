@@ -14,7 +14,7 @@ def create_roi_table(db):
     Create ROI table
     '''
     # Create ROI table
-    q = 'CREATE TABLE ROI (\
+    q = 'CREATE TABLE Roi (\
     id INTEGER PRIMARY KEY NOT NULL,\
     dicom_struct_id INTEGER,\
     image_id INTEGER,\
@@ -49,5 +49,5 @@ def insert_roi_from_file(db, filename, dicom_series):
         tqdm.write(f'Cannot find DicomStruct matching {filename}')
     roi = {'dicom_struct_id': struct['id'], 'image_id': e['id'], 'names': struct['names'],
            'frame_of_reference_uid': dicom_series['frame_of_reference_uid'], 'labels': None}
-    e = syd.insert_one(db['ROI'], roi)
+    e = syd.insert_one(db['Roi'], roi)
     return e
