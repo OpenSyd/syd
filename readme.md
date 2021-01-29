@@ -4,9 +4,21 @@
 SYD is a command-line environment and a python toolkit to perform image processing tasks on a database of medical images. It is initially developed to manage SPECT/CT images and perform tasks such as computing activity or integrated activity in various ROIs, in the field of Target Radionuclide Therapy and nuclear medicine.
 
 
-use  ```git clone --recursive ``` or ```git submodule update --init```
+use  ```git clone --recursive ``` or ```git submodule update --init```. Warning: syd contains git submodules so you need to use ```--recursive```the first time you clone the repository. 
 
-SYD PY
+Then, install with ```pip install -e .``` in the cloned folder. You can check that everything goes well with:
+
+```
+python -m unittest syd_test -v
+```
+
+From here, you can start using the syd module in your python scripts:
+
+```
+import syd
+```
+
+Some documentation here: https://syd.readthedocs.io/en/latest
 
 # Main API
 
@@ -86,32 +98,3 @@ itk_image = syd.read_itk_image(db, image)
 new_image = syd.insert_new_image(db, image, itk_image)
 new_image = syd.insert_write_new_image(db, image, itk_image, tags)
 ```
-
-# Test
-
-To run unit tests
-
-```
-python -m unittest syd_test -v
-```
-
-# DataBase Structure
-
-The SYD database is structured as follow :
-- A Patient table containing the patient information and various id
-- An Injection table, related to the patient table and containing all information about the injection of a radioisotope. This table uses the Radionuclide table that contains radionuclide properties and which is already pre-filled.
-- An Acquisition table related to an injection, corresponding to the acquisition of some data with an imaging system. Dicom images and listmode data will refer to an acquisition. This table makes possible chronological display of all acquisitions related to an injection.
-- A Listmode table containing the listmode data and associated files (see the table File below).
-- A DicomStudy table containing all the Dicom studies for one patient
-- A DicomSerie table containing series for one study and linked to one Acquisition. An Acquisition is linked to all the associated DicomSeries and listmode data.
-- A DicomFile table containing details about the dicom file.
-- An Image table that groups all images that will be created. Usually stored as .mhd/.raw files.
-- A File table that store path for all the files included in the database
-
-# View
-
-In ```syd_find```, the resulting table of elements is printed with a panda dataframe. The elements are extracted from
- the database via either the raw elements in the table or via a view. The views are defined in the FormatView table
-  and created with ```syd_clear_view --default``` or database creations. Additional view can be created with the
-   ```syd_insert_view``` command.  
-
