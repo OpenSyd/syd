@@ -396,8 +396,12 @@ def insert_dicom_series_from_dataset(db, filename, ds, patient):
             acquisition_date = ds.InstanceCreationDate
             acquisition_time = ds.InstanceCreationTime
         except:
-            acquisition_date = ds.StructureSetDate
-            acquisition_time = ds.StructureSetTime
+            try:
+                acquisition_date = ds.StructureSetDate
+                acquisition_time = ds.StructureSetTime
+            except:
+                acquisition_date = ds.SeriesDate
+                acquisition_time = ds.SeriesTime
 
     try:
         reconstruction_date = ds.ContentDate
@@ -531,8 +535,12 @@ def insert_dicom_file_from_dataset(db, ds, filename, dicom_series, future_dicom_
             acquisition_date = ds.InstanceCreationDate
             acquisition_time = ds.InstanceCreationTime
         except:
-            acquisition_date = ds.StructureSetDate
-            acquisition_time = ds.StructureSetTime
+            try:
+                acquisition_date = ds.StructureSetDate
+                acquisition_time = ds.StructureSetTime
+            except:
+                acquisition_date = ds.SeriesDate
+                acquisition_time = ds.SeriesTime
 
     try:
         reconstruction_date = ds.ContentDate
