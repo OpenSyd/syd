@@ -179,8 +179,12 @@ def insert_roi_from_struct(db, struct, crop):
             itk.imwrite(mask, output_filename)
             im = {'patient_id': patient['id'], 'injection_id': injection_id, 'acquisition_id': acquisition_id,
                   'frame_of_reference_uid': dicom_series['frame_of_reference_uid'], 'modality': 'RTSTRUCT',
-                  'labels': None}
-            im = syd.insert_write_new_image(db, im, itk.imread(output_filename))
+                  'labels': roiname}
+            j = syd.find_one(db['Image'], labels = im['labels'],acquisition_id = im['acquisition_id'], injection_id=im['injection_id'])
+            if not j:
+                im = syd.insert_write_new_image(db, im, itk.imread(output_filename))
+            else:
+                continue
             roi = {'dicom_struct_id': struct['id'], 'image_id': im['id'],
                    'frame_of_reference_uid': struct['frame_of_reference_uid'], 'names': roiname, 'labels': None}
             roi = syd.insert_one(db['Roi'], roi)
