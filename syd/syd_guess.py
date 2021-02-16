@@ -210,7 +210,7 @@ def guess_or_create_injection(db, ds, dicom_study, dicom_series):
             if not injection:
                 injection = new_injection(db, dicom_study, rad_info)
     except:
-        # tqdm.write('Cannot find info on radiopharmaceutical in DICOM')
+        #tqdm.write('Cannot find info on radiopharmaceutical in DICOM')
         injection = search_injection(db, ds, dicom_study, dicom_series)
 
     # return injection (could be None)

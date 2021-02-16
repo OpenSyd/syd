@@ -447,6 +447,14 @@ def insert_dicom_series_from_dataset(db, filename, ds, patient):
         except:
             print('')
         dicom_series.acquisition_id = acq.id
+    
+    # try to guess injection (later)
+    inj = guess_or_create_injection(db, ds, dicom_study, dicom_series)  # FIXME do it later
+    if inj:
+        dicom_series.injection_id = inj.id
+    else:
+        dicom_series.injection_id = acq.injection_id
+
 
     # folder
     dicom_series.folder = build_dicom_series_folder(db, dicom_series)
