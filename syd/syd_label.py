@@ -29,7 +29,7 @@ def add_labels(elements, labels):
     all_labels = ''
     for t in labels:
         t = t.strip() # remove space
-        all_labels = all_labels+' '+t
+        all_labels = all_labels+''+t
 
     for e in elements:
         if 'labels' in e:
