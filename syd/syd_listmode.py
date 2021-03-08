@@ -163,10 +163,10 @@ def check_type(file):
     file = str(file.name)
     pattern = re.compile("I\d\d")
     if file.endswith(".dat"):
-        if file == "fullPatientDetails.dat":
-            result = "None.type"
-        else:
+        if file.find('tomo') != -1 or file.find('static') != -1 or file.find('wb') != -1:
             result = "Listmode.dat"
+        else:
+            result = "Non.Type"
     elif file.endswith(".list"):
         result = "Listmode.list"
     elif file.endswith(".npz"):
