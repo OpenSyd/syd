@@ -41,7 +41,7 @@ def guess_or_create_patient(db, ds):
 ### Acquisition ###
 def nearest_acquisition(db, date, patient, **kwargs):
     tmp = syd.find_one(db['Acquisition'], date=date)
-    if tmp: # if an acquisition already exist no need to find or
+    if tmp:  # if an acquisition already exist no need to find or
         return tmp
     else:
         t = kwargs.get('t', None)
@@ -66,7 +66,7 @@ def nearest_acquisition(db, date, patient, **kwargs):
                     minnimum = np.abs(date - acq[0]['date'])
                     for tmp in acq:
                         m = np.abs(date - tmp['date'])
-                        if m <= timedelta(1.0 / 24.0 / 60.0 * 10.0):
+                        if m <= timedelta(1.0 / 24.0 / 60.0 * 1.0):
                             # timedelta usefull for multiple listmode for example tomo + wholebody
                             if m <= minnimum:
                                 minnimum = m
@@ -210,7 +210,7 @@ def guess_or_create_injection(db, ds, dicom_study, dicom_series):
             if not injection:
                 injection = new_injection(db, dicom_study, rad_info)
     except:
-        #tqdm.write('Cannot find info on radiopharmaceutical in DICOM')
+        # tqdm.write('Cannot find info on radiopharmaceutical in DICOM')
         injection = search_injection(db, ds, dicom_study, dicom_series)
 
     # return injection (could be None)
@@ -318,7 +318,15 @@ def guess_content_type(file):
                 tmp = dicom[0x0008, 0x103e].value
             except:
                 tqdm.write('Cannot read Series Description')
-            if modality == 'CT':
+            try:
+                dataset = dicom[0x0011, 0x1012].value
+            except:
+                tqdm.write('Cannot read Series Dataset')
+
+            if tmp.find('Compacté') != -1 or tmp.find('Transversal') != -1 or tmp.find('Fused') != -1:
+                content_type = 'Ignore'
+
+            elif modality == 'CT':
                 if tmp.find('CT') != -1:
                     content_type = 'Tomo'
                 else:
@@ -327,25 +335,36 @@ def guess_content_type(file):
             elif modality == 'NM':
                 if tmp.find('CE') != -1 or tmp.find('LIGHT') != -1 or tmp.find('THORAX') != -1:
                     content_type = 'Planar'
-                elif tmp.find('TOMO TAP') != -1:
-                    content_type = 'Proj'
+                elif tmp.find('TOMO') != -1:
+                    try:
+                        if dataset.find('SC1') != -1:
+                            try:
+                                number_of_frames = dicom[0x0028, 0x0008].value
+                                if number_of_frames > 50:
+                                    content_type = 'Proj'
+                            except:
+                                tqdm.write('Cannot read Series Number of Frames')
+                                content_type = 'Other'
+                    except:
+                        tqdm.write('The dataset name is not an array')
+                        content_type = 'Other'
                 elif tmp.find('RECON') != -1:
                     content_type = 'Recon'
                 else:
                     content_type = 'Other'
             elif modality == 'PT':
-                if tmp.find('RECOM') != -1:
+                if tmp.find('RECON') != -1:
                     content_type = 'Recon'
                 elif tmp.find('Transversal') != -1 or tmp.find('Rapport') != -1:
                     content_type = 'Other'
                 else:
                     content_type = 'Tomo'
-
             elif modality == 'OT':
                 if tmp.find('Volumetrix') != -1:
                     content_type = 'Recon'
                 else:
                     content_type = 'Other'
+
             else:
                 content_type = 'Other'
 
@@ -386,7 +405,6 @@ def guess_fov(db, acquisition):
     study = syd.find(db['DicomSeries'], acquisition_id=acquisition['id'])
     for s in study:  # Accessing the frame of reference uid directly from the file for all dicom in the acquisition
         frame_of_reference_study.append(s['frame_of_reference_uid'])
-
 
     acq = syd.find(db['Acquisition'], injection_id=acquisition['injection_id'])
     acq = [i for i in acq if (acquisition['id'] != i['id'])]  # Removing the acquisition given in the parameter
@@ -463,12 +481,12 @@ def guess_stitch(db, acquisition):
         file1 = syd.find_one(db['File'], id=image1['file_mhd_id'])
         image2 = syd.find_one(db['Image'], dicom_series_id=r[1]['id'])
         file2 = syd.find_one(db['File'], id=image2['file_mhd_id'])
-        path1 = os.path.join(db.absolute_data_folder,os.path.join(file1['folder'], file1['filename']))
-        path2 = os.path.join(db.absolute_data_folder,os.path.join(file2['folder'], file2['filename']))
+        path1 = os.path.join(db.absolute_data_folder, os.path.join(file1['folder'], file1['filename']))
+        path2 = os.path.join(db.absolute_data_folder, os.path.join(file2['folder'], file2['filename']))
         im1 = itk.imread(path1)
         im2 = itk.imread(path2)
         result = sti.stitch_image(im1, im2, 2, 0)
-        itk.imwrite(result,'./tmp.mhd')
+        itk.imwrite(result, './tmp.mhd')
         if acquisition['fov'] == '1':
             im = {'patient_id': patient['id'], 'injection_id': injection['id'], 'acquisition_id': acquisition['id'],
                   'pixel_type': 'float', 'pixel_unit': 'counts', 'modality': acquisition['modality'],
