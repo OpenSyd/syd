@@ -298,7 +298,8 @@ def insert_default_views(db):
             pixel_type pixel_unit \
             dicom_series.series_description=desc \
             dicom_series.dicom_study.study_description=study_desc \
-            dicom_series.dataset_name=dataset labels'},
+            dicom_series.dataset_name=dataset labels \
+            roi_id roi.dicom_struct_id=struct'},
 
     ]
     dd = BoxList(dd)

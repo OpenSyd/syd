@@ -188,7 +188,8 @@ def insert_roi_from_struct(db, struct, crop):
             roi = {'dicom_struct_id': struct['id'], 'image_id': im['id'],
                    'frame_of_reference_uid': struct['frame_of_reference_uid'], 'names': roiname, 'labels': None}
             roi = syd.insert_one(db['Roi'], roi)
-
+            im['roi_id'] = roi['id']
+            syd.update_one(db['Image'], im)
         except:
             tqdm.write(f'Error in {roiname, aroi}')
     if npbar > 0:
