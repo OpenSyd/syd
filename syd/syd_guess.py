@@ -345,6 +345,8 @@ def guess_content_type(file):
                             except:
                                 tqdm.write('Cannot read Series Number of Frames')
                                 content_type = 'Other'
+                        else:
+                            content_type = 'Other'
                     except:
                         tqdm.write('The dataset name is not an array')
                         content_type = 'Other'
