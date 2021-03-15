@@ -150,6 +150,10 @@ def insert_roi_from_struct(db, struct, crop):
     dicom_file = syd.find_one(db['DicomFile'], dicom_struct_id=struct['id'])
     file_struct = syd.find_one(db['File'], id=dicom_file['file_id'])
     filename_struct = db.absolute_data_folder + '/' + file_struct['folder'] + '/' + file_struct['filename']
+    ### Verifying if the ROI already exists in the table ###
+    e = syd.find(db['Roi'], dicom_struct_id=struct['id'])
+    if e !=[]:
+        return {}
 
     ### Using GateTools to extract the image from the Dicom File ###
     structset = pydicom.read_file(filename_struct)
@@ -180,11 +184,7 @@ def insert_roi_from_struct(db, struct, crop):
             im = {'patient_id': patient['id'], 'injection_id': injection_id, 'acquisition_id': acquisition_id,
                   'frame_of_reference_uid': dicom_series['frame_of_reference_uid'], 'modality': 'RTSTRUCT',
                   'labels': roiname}
-            j = syd.find_one(db['Image'], labels = im['labels'],acquisition_id = im['acquisition_id'], injection_id=im['injection_id'])
-            if not j:
-                im = syd.insert_write_new_image(db, im, itk.imread(output_filename))
-            else:
-                continue
+            im = syd.insert_write_new_image(db, im, itk.imread(output_filename))
             roi = {'dicom_struct_id': struct['id'], 'image_id': im['id'],
                    'frame_of_reference_uid': struct['frame_of_reference_uid'], 'names': roiname, 'labels': None}
             roi = syd.insert_one(db['Roi'], roi)
@@ -194,6 +194,8 @@ def insert_roi_from_struct(db, struct, crop):
             tqdm.write(f'Error in {roiname, aroi}')
     if npbar > 0:
         pbar.close()
+
+    return roi
 
 
 # -----------------------------------------------------------------------------
