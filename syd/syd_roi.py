@@ -19,6 +19,9 @@ def create_roi_table(db):
     dicom_struct_id INTEGER,\
     image_id INTEGER,\
     frame_of_reference_uid,\
+    volume TEXT,\
+    mass TEXT, \
+    density TEXT, \
     names TEXT,\
     FOREIGN KEY(dicom_struct_id) REFERENCES DicomStruct(id) on delete cascade,\
     FOREIGN KEY(image_id) REFERENCES Image(id) on delete cascade\
