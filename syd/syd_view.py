@@ -283,7 +283,14 @@ def insert_default_views(db):
             'name': 'default',
             'table': 'Roi',
             'format' : 'id dicom_struct_id=struct\
-                image_id=image names'},
+                image_id=image names\
+                volume=cm³:4.2f mass=g:4.2f density=g.cm⁻³:8.2f'},
+
+        {
+            'name': 'default',
+            'table':'DoseByOrgan',
+            'format' : 'id injection_id roi_id\
+            value units std_dev'},
 
 
         {
@@ -293,6 +300,7 @@ def insert_default_views(db):
             modality acquisition_date=acq_date\
             injection.radionuclide.name=rad:5 \
             injection.date=inj_date \
+            injection.cycle=cycle \
             dicom_series_id=series\
             dicom_series.acquisition_id=acq_id\
             pixel_type pixel_unit \

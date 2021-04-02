@@ -87,6 +87,8 @@ def insert_image_from_dicom(db, dicom_series):
         pixel_unit = 'counts'
     if modality == 'PT':
         pixel_unit = 'MBq/mL'
+    if modality == 'RTDOSE':
+        pixel_unit = 'Gy'
 
     # get dicom files
     files = syd.get_dicom_series_files(db, dicom_series)

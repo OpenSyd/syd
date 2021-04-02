@@ -22,6 +22,7 @@ from .syd_printformat import *
 from .syd_acquisition import *
 from .syd_view import *
 from .syd_roi import *
+from .syd_dose_by_organ import *
 
 import logging
 
@@ -54,8 +55,9 @@ def create_db(filename, folder, overwrite=False):
     - Image
     - Listmode
     - Acquisition
-    - ROI
+    - Roi
     - View
+    - DoseByOrgan
     """
 
     # FIXME check if already exist
@@ -100,6 +102,7 @@ def create_db(filename, folder, overwrite=False):
     create_dicom_struct_table(db)
     create_roi_table(db)
     create_format_view_table(db)
+    create_dose_table(db)
     insert_default_views(db)
 
     # insert all columns for all tables in printFormat
