@@ -11,6 +11,7 @@ from pathlib import Path
 from box import Box
 from tqdm import tqdm
 from shutil import copyfile
+from .syd_helpers import *
 
 
 # -----------------------------------------------------------------------------
@@ -28,6 +29,8 @@ def create_dicom_struct_table(db):
     FOREIGN KEY(dicom_series_id) REFERENCES DicomSeries(id) on delete cascade\
     )'
     result = db.query(q)
+    dicom_serie_table = db['DicomStruct']
+    dicom_serie_table.create_column('creation_date', db.types.datetime)
 
 
 # -----------------------------------------------------------------------------
@@ -64,6 +67,17 @@ def insert_struct_from_file(db, filename):
     except:
         tqdm.write('Ignoring {}: Cannot read SeriesInstanceUID'.format(Path(filename).name))
         return {}
+    try:
+        creation_date = ds.StudyDate
+        creation_time = ds.StudyDate
+    except:
+        try:
+            creation_date = ds.StructureSetDate
+            creation_time = ds.StructureSetTime
+        except:
+            print(f'Could not find date for the file : {filename}')
+
+    creation_date = dcm_str_to_date(creation_date+ ' ' + creation_time)
 
     try:
         dicom_serie = syd.find_one(db['DicomSeries'], series_uid=series_uid)
@@ -74,8 +88,7 @@ def insert_struct_from_file(db, filename):
         struct_names = [str(ssroi.ROIName) for ssroi in ds.StructureSetROISequence]
         separator = ';'
         struct_names = separator.join(struct_names)
-        struct = {'dicom_series_id': dicom_serie['id'], 'names': struct_names, 'series_uid': series_uid,
-                  'frame_of_reference_uid': dicom_serie['frame_of_reference_uid']}
+        struct = {'dicom_series_id': dicom_serie['id'], 'names': struct_names, 'series_uid': series_uid,'frame_of_reference_uid': dicom_serie['frame_of_reference_uid'],'creation_date':creation_date}
         struct = syd.insert_one(db['DicomStruct'], struct)
         dicom_file = insert_file(db, ds, filename, struct)
         return struct

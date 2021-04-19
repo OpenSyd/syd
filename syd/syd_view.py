@@ -276,14 +276,14 @@ def insert_default_views(db):
             'name': 'default',
             'table': 'DicomStruct',
             'format': 'id dicom_series.dicom_study.patient.name=P:<10\
-                dicom_series_id=series\
+                dicom_series_id=series creation_date\
                 names'},
 
         {
             'name': 'default',
             'table': 'Roi',
             'format' : 'id dicom_struct_id=struct\
-                image_id=image names\
+                image_id=image names dicom_struct.creation_date\
                 volume=cm³:4.2f mass=g:4.2f density=g.cm⁻³:8.2f'},
 
         {
