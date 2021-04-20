@@ -136,6 +136,8 @@ def create_view_query_from_format(name, table, columns_format):
                     s += f'LEFT JOIN {t1} ON {t1}.id = {t2}.{tt}_id '
                 elif t1 == 'DicomStudy' and table == 'Image':
                     s += f'LEFT JOIN {t1} ON {t1}.id = {t2}.{tt}_id '
+                elif t1 == 'DicomStruct' and table == 'Roi':
+                    s += f'LEFT JOIN {t1} ON {t1}.id = {t2}.{tt}_id '
                 else:
                     s += f'INNER JOIN {t1} ON {t1}.id = {t2}.{tt}_id '
                 s += '\n'
@@ -284,7 +286,8 @@ def insert_default_views(db):
             'table': 'Roi',
             'format' : 'id dicom_struct_id=struct\
                 image_id=image names dicom_struct.creation_date\
-                volume=cm³:4.2f mass=g:4.2f density=g.cm⁻³:8.2f'},
+                volume=cm³:4.2f mass=g:4.2f density=g.cm⁻³:8.2f\
+                labels'},
 
         {
             'name': 'default',
