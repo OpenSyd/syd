@@ -292,8 +292,9 @@ def insert_default_views(db):
         {
             'name': 'default',
             'table':'DoseByOrgan',
-            'format' : 'id injection_id roi_id\
-            value units std_dev'},
+            'format' : 'id injection_id roi_id image_dose_id=image\
+            injection.cycle=cycle\
+            value units std_dev labels'},
 
 
         {

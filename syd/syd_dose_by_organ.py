@@ -18,7 +18,6 @@ def create_dose_table(db):
     value TEXT,\
     units TEXT,\
     std_dev TEXT,\
-    label TEXT,\
     FOREIGN KEY(injection_id) REFERENCES Injection(id) on delete cascade,\
     FOREIGN KEY(roi_id) REFERENCES Roi(id) on delete cascade\
     )'
