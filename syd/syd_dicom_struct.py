@@ -142,7 +142,8 @@ def insert_roi_from_struct(db, struct, crop):
     Insert an ROI from a DicomStruct file
     """
 
-    roi = []
+    roi = Box()
+    res= []
     series_id = struct['dicom_series_id']
     dicom_series = syd.find_one(db['DicomSeries'], id=series_id)
     acquisition = syd.find_one(db['Acquisition'], id=dicom_series['acquisition_id'])
@@ -202,13 +203,14 @@ def insert_roi_from_struct(db, struct, crop):
                    'frame_of_reference_uid': struct['frame_of_reference_uid'], 'names': roiname, 'labels': None}
             roi = syd.insert_one(db['Roi'], roi)
             im['roi_id'] = roi['id']
+            res.append(roi)
             syd.update_one(db['Image'], im)
         except:
             tqdm.write(f'Error in {roiname, aroi}')
     if npbar > 0:
         pbar.close()
 
-    return roi
+    return res
 
 
 # -----------------------------------------------------------------------------
