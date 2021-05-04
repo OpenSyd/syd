@@ -24,6 +24,7 @@ def create_dicom_struct_table(db):
     id INTEGER PRIMARY KEY NOT NULL,\
     dicom_series_id INTEGER NOT NULL,\
     frame_of_reference_uid INTEGER,\
+    sop_uid INTEGER NOT NULL UNIQUE,\
     names TEXT,\
     series_uid INTEGER,\
     FOREIGN KEY(dicom_series_id) REFERENCES DicomSeries(id) on delete cascade\
@@ -88,7 +89,7 @@ def insert_struct_from_file(db, filename):
         struct_names = [str(ssroi.ROIName) for ssroi in ds.StructureSetROISequence]
         separator = ';'
         struct_names = separator.join(struct_names)
-        struct = {'dicom_series_id': dicom_serie['id'], 'names': struct_names, 'series_uid': series_uid,'frame_of_reference_uid': dicom_serie['frame_of_reference_uid'],'creation_date':creation_date}
+        struct = {'dicom_series_id': dicom_serie['id'], 'names': struct_names, 'series_uid': series_uid,'frame_of_reference_uid': dicom_serie['frame_of_reference_uid'],'creation_date':creation_date, 'sop_uid':sop_uid}
         struct = syd.insert_one(db['DicomStruct'], struct)
         dicom_file = insert_file(db, ds, filename, struct)
         return struct
@@ -158,7 +159,7 @@ def insert_roi_from_struct(db, struct, crop):
         file_img = syd.find_one(db['File'], id=image_ct['file_mhd_id'])
     except:
         print('Could not find the CT image in the database')
-    filename_img = db.absolute_data_folder + '/' + file_img['folder'] + '/' + file_img['filename']
+    filename_img_ct = db.absolute_data_folder + '/' + file_img['folder'] + '/' + file_img['filename']
 
     ### Getting the DicomStruct dicom path ###
     dicom_file = syd.find_one(db['DicomFile'], dicom_struct_id=struct['id'])
@@ -171,8 +172,8 @@ def insert_roi_from_struct(db, struct, crop):
 
     ### Using GateTools to extract the image from the Dicom File ###
     structset = pydicom.read_file(filename_struct)
-    img = itk.imread(filename_img)
-    base_filename, extension = os.path.splitext(filename_img)
+    img_ct = itk.imread(filename_img_ct,itk.F)
+    base_filename, extension = os.path.splitext(filename_img_ct)
     roi_names = gt.list_roinames(structset)
     roi_objs = list()
     npbar = 0
@@ -190,26 +191,25 @@ def insert_roi_from_struct(db, struct, crop):
         pbar = tqdm(total=npbar, leave=False)
     for roiname, aroi in zip(roi_names, roi_objs):
         try:
-            mask = aroi.get_mask(img, corrected=False, pbar=pbar)
+            mask = aroi.get_mask(img_ct, corrected=False, pbar=pbar)
             if crop:
                 mask = gt.image_auto_crop(mask, bg=0)
             output_filename = base_filename + '_' + ''.join(e for e in roiname if e.isalnum()) + '.mhd'
-            itk.imwrite(mask, output_filename)
             im = {'patient_id': patient['id'], 'injection_id': injection_id, 'acquisition_id': acquisition_id,
                   'frame_of_reference_uid': dicom_series['frame_of_reference_uid'], 'modality': 'RTSTRUCT',
                   'labels': roiname}
-            im = syd.insert_write_new_image(db, im, itk.imread(output_filename))
+            im = syd.insert_write_new_image(db, im, mask)
             roi = {'dicom_struct_id': struct['id'], 'image_id': im['id'],
                    'frame_of_reference_uid': struct['frame_of_reference_uid'], 'names': roiname, 'labels': None}
             roi = syd.insert_one(db['Roi'], roi)
             im['roi_id'] = roi['id']
             res.append(roi)
             syd.update_one(db['Image'], im)
+            #syd.update_roi_characteristics(db,roi)
         except:
             tqdm.write(f'Error in {roiname, aroi}')
     if npbar > 0:
         pbar.close()
-
     return res
 
 

@@ -278,7 +278,7 @@ def insert_default_views(db):
             'name': 'default',
             'table': 'DicomStruct',
             'format': 'id dicom_series.dicom_study.patient.name=P:<10\
-                dicom_series_id=series creation_date\
+                dicom_series_id=series creation_date sop_uid\
                 names'},
 
         {
