@@ -292,6 +292,8 @@ def insert_dicom_from_file(db, filename, patient, future_dicom_files=[]):
 
     if dicom_series is None:
         dicom_series = insert_dicom_series_from_dataset(db, filename, ds, patient)
+        if dicom_series == {}:
+            return {}
         if dicom_series.modality != 'RTSTRUCT':
             dicom_series = syd.insert_one(db['DicomSeries'], dicom_series)
             folder_id = 'dicom_' + str(dicom_series.id)
@@ -318,7 +320,8 @@ def insert_dicom_from_file(db, filename, patient, future_dicom_files=[]):
     dicom_file = insert_dicom_file_from_dataset(db, ds, filename, dicom_series, future_dicom_files)
     if len(future_dicom_files) > 1:
         tqdm.write(f'DicomFile {dicom_file.instance_number} detected (will be inserted later)')
-
+    
+    return dicom_series
 
 # -----------------------------------------------------------------------------
 def insert_dicom_series_from_dataset(db, filename, ds, patient):
@@ -435,15 +438,12 @@ def insert_dicom_series_from_dataset(db, filename, ds, patient):
     image_size, image_spacing = get_dicom_image_info(ds)
     dicom_series.image_size = image_size
     dicom_series.image_spacing = image_spacing
-
-    # try to guess injection (later)
-    inj = guess_or_create_injection(db, ds, dicom_study, dicom_series)  # FIXME do it later
-    if inj:
-        dicom_series.injection_id = inj.id
-
-    # try to guess acquisition
+    
+    # try to guess patient
     if not patient:
         patient = guess_or_create_patient(db, ds)
+
+    # try to guess acquisition
     acq = guess_or_create_acquisition(db, dicom_series, patient)
     if acq:
         try:
@@ -456,9 +456,11 @@ def insert_dicom_series_from_dataset(db, filename, ds, patient):
     inj = guess_or_create_injection(db, ds, dicom_study, dicom_series)  # FIXME do it later
     if inj:
         dicom_series.injection_id = inj.id
-    else:
+    elif acq:
         dicom_series.injection_id = acq.injection_id
-
+    else:
+        print('No injection found')
+        return {}
 
     # folder
     dicom_series.folder = build_dicom_series_folder(db, dicom_series)
