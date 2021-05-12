@@ -99,8 +99,7 @@ def insert_image_from_dicom(db, dicom_series):
     # get folder
     folder = dicom_series['folder']
     folder = os.path.join(db.absolute_data_folder, folder)
-    tmp = folder.split('/')
-    tmp[len(tmp)-2] = tmp[len(tmp) - 2].split('_')
+    acquisition_id = int(os.path.basename(os.path.dirname(folder)).split('_')[1])
     suid = dicom_series['series_uid']
 
     PixelType = itk.ctype('float')
@@ -160,7 +159,7 @@ def insert_image_from_dicom(db, dicom_series):
         'patient_id': dicom_series.dicom_study.patient.id,
         'injection_id': injid,
         'dicom_series_id': dicom_series.id,
-        'acquisition_id': int(tmp[len(tmp)-2][1]),
+        'acquisition_id': acquisition_id,
         'pixel_type': pixel_type,
         'pixel_unit': pixel_unit,
         'frame_of_reference_uid': dicom_series.frame_of_reference_uid,

@@ -11,7 +11,7 @@ import numpy as np
 from box import Box
 import pydicom
 import os
-from shutil import copy
+from shutil import copy, move
 from tqdm import tqdm
 
 
@@ -152,7 +152,7 @@ def insert_listmode_from_file(db, filename, patient):
     copy(filename, acqui_folder)
     old_filename = os.path.join(acqui_folder, filename.name)
     new_filename = os.path.join(acqui_folder, base_filename)
-    os.rename(old_filename, new_filename)
+    move(old_filename, new_filename)
 
     # return create listmode
     return l2
