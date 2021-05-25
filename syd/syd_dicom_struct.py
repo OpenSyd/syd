@@ -195,17 +195,17 @@ def insert_roi_from_struct(db, struct, crop):
             if crop:
                 mask = gt.image_auto_crop(mask, bg=0)
             output_filename = base_filename + '_' + ''.join(e for e in roiname if e.isalnum()) + '.mhd'
-            im = {'patient_id': patient['id'], 'injection_id': injection_id, 'acquisition_id': acquisition_id,
+            im = {'patient_id': patient['id'], 'injection_id': injection_id, 'acquisition_id': acquisition_id, 'pixel_unit':'Binary', 'pixel_type':'float',
                   'frame_of_reference_uid': dicom_series['frame_of_reference_uid'], 'modality': 'RTSTRUCT',
                   'labels': roiname}
             im = syd.insert_write_new_image(db, im, mask)
             roi = {'dicom_struct_id': struct['id'], 'image_id': im['id'],
-                   'frame_of_reference_uid': struct['frame_of_reference_uid'], 'names': roiname, 'labels': None}
+                   'frame_of_reference_uid': struct['frame_of_reference_uid'], 'name': roiname, 'labels': None}
             roi = syd.insert_one(db['Roi'], roi)
             im['roi_id'] = roi['id']
             res.append(roi)
             syd.update_one(db['Image'], im)
-            #syd.update_roi_characteristics(db,roi)
+            syd.update_roi_characteristics(db,roi)
         except:
             tqdm.write(f'Error in {roiname, aroi}')
     if npbar > 0:

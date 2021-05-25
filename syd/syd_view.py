@@ -285,14 +285,15 @@ def insert_default_views(db):
             'name': 'default',
             'table': 'Roi',
             'format' : 'id dicom_struct_id=struct\
-                image_id=image names dicom_struct.creation_date\
+                image_id=image name dicom_struct.creation_date\
                 volume=cm³:4.2f mass=g:4.2f density=g.cm⁻³:8.2f\
                 labels'},
 
         {
             'name': 'default',
             'table':'DoseByOrgan',
-            'format' : 'id injection_id roi_id image_dose_id=image\
+            'format' : 'id injection_id injection.radionuclide.name=rad:5\
+            roi_id roi.name image_dose_id=image\
             injection.cycle=cycle\
             value units std_dev labels'},
 
