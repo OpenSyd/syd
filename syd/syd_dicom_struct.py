@@ -195,7 +195,7 @@ def insert_roi_from_struct(db, struct, crop):
             if crop:
                 mask = gt.image_auto_crop(mask, bg=0)
             output_filename = base_filename + '_' + ''.join(e for e in roiname if e.isalnum()) + '.mhd'
-            im = {'patient_id': patient['id'], 'injection_id': injection_id, 'acquisition_id': acquisition_id, 'pixel_unit':'Binary', 'pixel_type':'float',
+            im = {'patient_id': patient['id'], 'injection_id': injection_id, 'acquisition_id': acquisition_id, 'pixel_unit':'binary', 'pixel_type':'float',
                   'frame_of_reference_uid': dicom_series['frame_of_reference_uid'], 'modality': 'RTSTRUCT',
                   'labels': roiname}
             im = syd.insert_write_new_image(db, im, mask)

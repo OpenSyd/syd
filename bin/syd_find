@@ -155,6 +155,8 @@ def syd_find(table_name, grep, db,
             filenames = [syd.get_file_absolute_filename(db, e) for e in raw_elements]
         if table_name == 'DicomFile':
             filenames = [syd.get_dicom_file_absolute_filename(db, e) for e in raw_elements]
+        if table_name == "Roi":
+             filenames = [syd.get_roi_file_absolute_filename(db, e) for e in raw_elements]
         if filenames:
             df = df.assign(filename=filenames)
         else:

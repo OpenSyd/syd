@@ -107,5 +107,9 @@ def update_roi_characteristics(db , r, background=0):
 
     return 1
 
-
+# -----------------------------------------------------------------------------
+def get_roi_file_absolute_filename(db,e):
+    image = syd.find_one(db['Image'], id=e['image_id'])
+    filepath = syd.get_image_filename(db,image)
+    return filepath
 

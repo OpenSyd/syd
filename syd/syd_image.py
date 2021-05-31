@@ -71,7 +71,7 @@ def build_image_folder(db, image):
 
 
 # -----------------------------------------------------------------------------
-def insert_image_from_dicom(db, dicom_series):
+def insert_image_from_dicom(db, dicom_series,dicom_path):
     '''
     Convert one Dicom image to MHD image
     '''
@@ -79,16 +79,25 @@ def insert_image_from_dicom(db, dicom_series):
     # modality
     modality = dicom_series['modality']
 
-    # guess pixel unit FIXME --> check dicom tag ?
-    pixel_unit = 'undefined'
-    if modality == 'CT':
-        pixel_unit = 'HU'
-    if modality == 'NM':
-        pixel_unit = 'counts'
-    if modality == 'PT':
-        pixel_unit = 'MBq/mL'
-    if modality == 'RTDOSE':
-        pixel_unit = 'Gy'
+    #Try guessing pixel unit from dicom
+    try:
+        ds = pydicom.read_file(dicom_path)
+        unit = ds[0x0054,0x1001].value
+        if unit == "BQML":
+            pixel_unit = 'Bq/mL'
+        else:
+            pixel_unit=unit
+    except:
+
+        # guess pixel unit FIXME --> check dicom tag ?
+        pixel_unit = 'undefined'
+        if modality == 'CT':
+            pixel_unit = 'HU'
+        if modality == 'NM':
+            pixel_unit = 'counts'
+        if modality == 'RTDOSE':
+            pixel_unit = 'Gy'
+
 
     # get dicom files
     files = syd.get_dicom_series_files(db, dicom_series)
