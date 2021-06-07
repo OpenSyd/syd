@@ -33,7 +33,7 @@ setuptools.setup(
         'pandas',
         'xlrd',
         'tabulate',
-        'SQLAlchemy==1.3.20'
+        'SQLAlchemy'
       ],
     scripts=[
         'bin/syd_create',
