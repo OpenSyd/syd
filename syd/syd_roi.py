@@ -9,7 +9,7 @@ import os
 import pydicom
 import numpy as np
 import gatetools as gt
-
+import gc
 
 
 # -----------------------------------------------------------------------------
@@ -79,9 +79,9 @@ def update_roi_characteristics(db , r, background=0):
         return 0
     filename_im = os.path.join(db.absolute_data_folder,os.path.join(file_img['folder'], file_img['filename']))
     filename_ct = os.path.join(db.absolute_data_folder, os.path.join(file_img_ct['folder'], file_img_ct['filename']))
-    roi = itk.imread(filename_im,itk.F)
-    ct = itk.imread(filename_ct,itk.F)
-    array_im = itk.array_from_image(roi).astype(float)
+    roi = itk.imread(filename_im)
+    ct = itk.imread(filename_ct)
+    array_im = itk.array_from_image(roi)
     spacing = roi.GetSpacing()
 
     ### Volume ###
