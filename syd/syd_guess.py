@@ -318,6 +318,7 @@ def guess_content_type(file):
                 tmp = dicom[0x0008, 0x103e].value
             except:
                 tqdm.write('Cannot read Series Description')
+                tmp = ''
             try:
                 dataset = dicom[0x0011, 0x1012].value
             except:
