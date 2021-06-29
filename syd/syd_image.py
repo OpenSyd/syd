@@ -160,12 +160,14 @@ def insert_image_from_dicom(db, dicom_series,dicom_path):
         injid = dicom_series.injection_id
 
     # create Image
-    syd.update_nested_one(db, dicom_series)
+    #syd.update_nested_one(db, dicom_series)
     labels = ''
     if 'labels' in dicom_series:
         labels = dicom_series.labels
+    dicom_study = syd.find_one(db['DicomStudy'], id=dicom_series.dicom_study_id)
+    patient = syd.find_one(db['Patient'], id = dicom_study.patient_id)
     img = {
-        'patient_id': dicom_series.dicom_study.patient.id,
+        'patient_id': patient.id,
         'injection_id': injid,
         'dicom_series_id': dicom_series.id,
         'acquisition_id': acquisition_id,
