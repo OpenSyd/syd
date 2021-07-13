@@ -18,6 +18,10 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--output', '-o', help='Output directory')
 @click.option('--db', default='', help='DB filename (SYD_DB_FILENAME environment variable is used if no filename')
 @click.option('--contour', default=False, is_flag=True, help='Option to pu the Roi in countour instead of overlay')
+def snapshot_click(db, patient_id, output, contour):
+    snapshot(db, patient_id, output, contour)
+
+
 def snapshot(db, patient_id, output, contour):
     db_filename = syd.get_db_filename(db)
     db = syd.open_db(db_filename)
@@ -101,4 +105,4 @@ def snapshot(db, patient_id, output, contour):
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    snapshot()
+    snapshot_click()
