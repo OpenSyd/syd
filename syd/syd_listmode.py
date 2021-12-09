@@ -186,7 +186,10 @@ def return_date(filename):
         annee = ['2017', '2018', '2019', '2020', '2021', '2022']
         for a in annee:
             if date.find(a) != -1:
-                return datetime.strptime(date[0:date.find(a) + 10], '%d%m%Y%H%M%S')
+                tempDate = date[0:date.find(a) + 10]
+                if len(tempDate) == 13:
+                    tempDate = "0" + tempDate
+                return datetime.strptime(tempDate, '%d%m%Y%H%M%S')
     except:
         print('Error returning date from filename')
         return datetime(1958, 10, 4, 0, 0, 0)
