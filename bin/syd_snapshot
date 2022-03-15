@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+
+import syd
+import click
+from fpdf import FPDF
+from syd.syd_algo.create_snapshot import *
+import os
+import tempfile
+import shutil
+
+# ------------------------------------------------------------------
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.option('--patient_id', '-p', default=None,
+              help='Id of a specific patient. If no Id is specified a snapshot will be made for all the patient in the database')
+@click.option('--output', '-o', help='Output directory')
+@click.option('--db', default='', help='DB filename (SYD_DB_FILENAME environment variable is used if no filename')
+@click.option('--contour', default=False, is_flag=True, help='Option to pu the Roi in countour instead of overlay')
+def snapshot_click(db, patient_id, output, contour):
+    snapshot(db, patient_id, output, contour)
+
+
+def snapshot(db, patient_id, output, contour):
+    db_filename = syd.get_db_filename(db)
+    db = syd.open_db(db_filename)
+    tmpdirpath = tempfile.mkdtemp()
+    if patient_id is not None:
+        try:
+            patient = syd.find(db['Patient'], id=patient_id)
+        except:
+            print('Could not find patient in the database')
+            exit()
+    else:
+        patient = syd.find_all(db['Patient'])
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font('Arial', 'B', 16)
+
+    ## coordonnées des images dans pdf
+    x_start = 10
+    x_delta = 67
+    y_start = 40
+    y_delta = 30
+    size_x = 65
+    size_y = 65
+
+    x = x_start
+    y = y_start
+
+    # if not os.path.isfile(names[0]):
+    for p in patient:
+        image_roi = syd.find(db['Image'], patient_id=p['id'], modality='RTSTRUCT')
+        roi = []
+        for i in image_roi:
+            tmp = syd.find_one(db['Roi'], id=i['roi_id'])
+            roi.append(tmp)
+        i = 0
+        for r in roi:
+            ### Get Roi filename ###
+            im_roi = syd.find_one(db['Image'], roi_id=r['id'])
+            file_img = syd.find_one(db['File'], id=im_roi['file_mhd_id'])
+            filename_roi = os.path.join(db.absolute_data_folder, os.path.join(file_img['folder'], file_img['filename']))
+            ### Get CT filename ####
+            im_ct = syd.find_one(db['Image'], frame_of_reference_uid=r['frame_of_reference_uid'], modality='CT')
+            file_img_ct = syd.find_one(db['File'], id=im_ct['file_mhd_id'])
+            filename_ct = os.path.join(db.absolute_data_folder,
+                                       os.path.join(file_img_ct['folder'], file_img_ct['filename']))
+            ### Create snapshot ###
+            struct_name = r['name']
+            names = []
+            names.append(f'{tmpdirpath}/{p.name}_{struct_name}_{str(r.id)}_1.png')
+            names.append(f'{tmpdirpath}/{p.name}_{struct_name}_{str(r.id)}_2.png')
+            names.append(f'{tmpdirpath}/{p.name}_{struct_name}_{str(r.id)}_3.png')
+            try:
+                create_snapshot(filename_ct, filename_roi, p.name, struct_name, names, str(r.id), contour)
+            except:
+                print(f'The Roi {filename_roi} could not be made into a snapshot')
+                continue
+            ### Save PDF ###
+            pdf.image(names[0], x, y, size_x, size_y)
+            x = x + x_delta
+            pdf.image(names[1], x, y, size_x, size_y)
+            x = x + x_delta
+            pdf.image(names[2], x, y, size_x, size_y)
+            x = x + x_delta
+
+            y = y + 2 * y_delta
+            x = x_start
+
+            i += 1
+            if i == 4:
+                pdf.add_page()
+                y = y_start
+                i = 0
+
+    if patient is not None:
+        pdf.output(os.path.join(output, f'snapshots_{patient[0].name}.pdf'), 'F')
+    else:
+        pdf.output(os.path.join(output, 'snapshots.pdf'), 'F')
+    shutil.rmtree(tmpdirpath)
+
+
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    snapshot_click()

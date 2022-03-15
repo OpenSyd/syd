@@ -51,5 +51,6 @@ setuptools.setup(
         'bin/syd_insert_view',
         'bin/syd_clear_view',
         'bin/syd_struct2roi',
-        'bin/syd_timeline']
+        'bin/syd_timeline',
+        'bin/syd_snapshot']
 )
