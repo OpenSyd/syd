@@ -28,7 +28,7 @@ setuptools.setup(
         'pydicom',
         'tqdm',
         'colored',
-        'itk>=5',
+        'itk>=5.0.1',
         'python-box',
         'pandas',
         'xlrd',
