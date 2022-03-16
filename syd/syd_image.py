@@ -231,7 +231,7 @@ def insert_new_image(db, img, itk_image):
     '''
 
     # set the id to None to force a new image
-    img['id'] = None
+    #img['id'] = None
 
     # insert Image to get the id
     img = syd.insert_one(db['Image'], img)
