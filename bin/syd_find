@@ -35,9 +35,9 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
               help='Only display elements with given id (maybe multiple)')
 @click.option('--vv/--no-vv', default=False,
               help='Try to open in VV (only work for Image and DicomSerie)')
-@click.option('--labels', '-l', default='', multiple=True,
+@click.option('--labels', '-l', default=[], multiple=True,
               help='Add a label to all found elements')
-@click.option('--rm_labels', '-rl', default='', multiple=True,
+@click.option('--rm_labels', '-rl', default=[], multiple=True,
               help='Remove a label to all found elements')
 @click.option('--clean_labels', is_flag=True,
               help='Remove all labels to all found elements')

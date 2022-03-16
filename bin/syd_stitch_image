@@ -8,7 +8,7 @@ import click
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('id', nargs=2)
-@click.option('--tag', default='', multiple=True,
+@click.option('--tag', default=[], multiple=True,
               help='Add tags')
 @click.option('--db', default='',
               help='DB filename (SYD_DB_FILENAME environment variable is used if no filename)')

@@ -23,7 +23,7 @@ setuptools.setup(
     python_requires='>=3.6',
     install_requires=[
         'gatetools>=0.8.8',
-        'click',
+        'click>=8.0.0',
         'dataset',
         'pydicom',
         'tqdm',
@@ -33,7 +33,7 @@ setuptools.setup(
         'pandas',
         'xlrd',
         'tabulate',
-        'SQLAlchemy'
+        'SQLAlchemy>=1.4.22'
       ],
     scripts=[
         'bin/syd_create',
