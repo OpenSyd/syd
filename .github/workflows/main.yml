@@ -13,8 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
-        ITK_VERSION: [5.0.0, 5.0.1, pre]
+        python-version: [3.6, 3.7, 3.8, 3.9]
+        ITK_VERSION: [5.0.1, 5.1.2, 5.2.1.post1]
         exclude:
           - python-version: 3.8
             ITK_VERSION: 5.0.0
